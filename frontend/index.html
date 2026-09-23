@@ -17,23 +17,22 @@
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Top Navigation -->
+    <!-- Header with Official PNGICSA Branding -->
     <header class="bg-brand-navy text-white shadow-md sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <!-- AFTER (Using New Official ICSA Logo) -->
-<div class="flex items-center space-x-4">
-    <!-- Image Logo with white background badge for contrast -->
-    <div class="bg-white p-1.5 rounded-lg shadow-sm flex items-center justify-center">
-        <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="h-10 w-auto object-contain">
-    </div>
-    <div>
-        <h1 class="font-bold text-base leading-tight tracking-wide text-white">BOMANA IMMIGRATION CENTRE (BIC)</h1>
-        <p class="text-[11px] text-amber-400 font-medium">Pre-Admission Custody & Case Management System</p>
-    </div>
-</div>
+            <div class="flex items-center space-x-4">
+                <div class="bg-white p-1 rounded-lg shadow-sm flex items-center justify-center">
+                    <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="h-10 w-auto object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\"fa-solid fa-shield-halved text-brand-red text-2xl\"></i>';">
+                </div>
+                <div>
+                    <h1 class="font-bold text-base leading-tight tracking-wide text-white">BOMANA IMMIGRATION CENTRE (BIC)</h1>
+                    <p class="text-[11px] text-amber-400 font-medium">Pre-Admission Custody & Case Management System</p>
+                </div>
+            </div>
             <div class="flex items-center space-x-3">
                 <div class="text-right text-xs">
                     <div class="font-semibold">Duty Manager Kila</div>
@@ -44,19 +43,19 @@
         </div>
     </header>
 
-    <!-- Main Content -->
+    <!-- Main Workspace -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
         <div class="flex justify-between items-center">
             <div>
                 <h2 class="text-2xl font-bold text-slate-900">Admissions Review Dashboard</h2>
                 <p class="text-sm text-slate-500">Live feed from BIC Case Management Database</p>
             </div>
-            <button onclick="fetchQueue()" class="bg-brand-navy text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition">
-                <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Queue
+            <button onclick="refreshAllData()" class="bg-brand-navy text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition">
+                <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Dashboard
             </button>
         </div>
 
-        <!-- Metrics Overview -->
+        <!-- Operational Metrics Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                 <p class="text-xs font-semibold text-slate-500">PENDING QUEUE</p>
@@ -90,7 +89,7 @@
                             <th class="py-3 px-4">Nationality</th>
                             <th class="py-3 px-4">Priority</th>
                             <th class="py-3 px-4">Risk Level</th>
-                            <th class="py-3 px-4 text-right">Action</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="queueTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
@@ -99,14 +98,53 @@
                 </table>
             </div>
         </div>
+
+        <!-- Executive Analytics Section -->
+        <div class="space-y-4 pt-4">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-chart-pie text-brand-red"></i>
+                    <span>Executive Analytics & Facility Snapshot</span>
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Risk Level Donut Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">POI Risk Level Breakdown</h4>
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Compound Capacity Bar Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Compound Occupancy Tracker</h4>
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="capacityChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Nationalities List -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Top Intakes by Nationality</h4>
+                    <ul id="nationalityList" class="divide-y divide-slate-100 text-xs font-medium space-y-2 pt-2">
+                        <li class="text-slate-400">Loading analytics...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
-        const API_URL = 'http://localhost:3005/v1/admissions/queue';
+        const API_BASE = '/v1'; // IIS Reverse Proxy Routes
+
+        let riskChartInstance = null;
+        let capacityChartInstance = null;
 
         async function fetchQueue() {
             try {
-                const res = await fetch(API_URL);
+                const res = await fetch(`${API_BASE}/admissions/queue`);
                 const result = await res.json();
                 
                 document.getElementById('queueCount').innerText = result.count || 0;
@@ -126,8 +164,11 @@
                             <td class="py-3 px-4">${item.nationality}</td>
                             <td class="py-3 px-4"><span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.priority}</span></td>
                             <td class="py-3 px-4"><span class="bg-red-50 text-red-700 font-bold px-2.5 py-1 rounded-full text-[10px]">${item.overall_calculated_risk}</span></td>
-                            <td class="py-3 px-4 text-right">
-                                <button class="bg-brand-navy hover:bg-slate-800 text-white font-semibold px-3 py-1.5 rounded text-xs">Review</button>
+                            <td class="py-3 px-4 text-right space-x-2">
+                                <a href="${API_BASE}/pacir/${item.pacir_id}/pdf" target="_blank" class="bg-brand-red hover:bg-red-900 text-white font-semibold px-3 py-1.5 rounded text-xs inline-flex items-center space-x-1">
+                                    <i class="fa-solid fa-file-pdf"></i>
+                                    <span>PDF Report</span>
+                                </a>
                             </td>
                         </tr>
                     `;
@@ -137,8 +178,67 @@
             }
         }
 
-        // Load queue on page load
-        fetchQueue();
+        async function loadAnalytics() {
+            try {
+                const res = await fetch(`${API_BASE}/analytics/summary`);
+                const { data } = await res.json();
+
+                if (riskChartInstance) riskChartInstance.destroy();
+                if (capacityChartInstance) capacityChartInstance.destroy();
+
+                const riskLabels = data.riskDistribution.map(r => r.risk_level);
+                const riskCounts = data.riskDistribution.map(r => parseInt(r.count));
+
+                riskChartInstance = new Chart(document.getElementById('riskChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: riskLabels,
+                        datasets: [{
+                            data: riskCounts,
+                            backgroundColor: ['#2E7D32', '#ED6C02', '#D32F2F', '#8B0000']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                const compoundLabels = data.compoundCapacity.map(c => c.name);
+                const occupancyData = data.compoundCapacity.map(c => c.current_occupancy);
+                const capacityData = data.compoundCapacity.map(c => c.total_capacity);
+
+                capacityChartInstance = new Chart(document.getElementById('capacityChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: compoundLabels,
+                        datasets: [
+                            { label: 'Occupied', data: occupancyData, backgroundColor: '#0F1E36' },
+                            { label: 'Capacity', data: capacityData, backgroundColor: '#E2E8F0' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                const natList = document.getElementById('nationalityList');
+                natList.innerHTML = '';
+                data.nationalityBreakdown.forEach(item => {
+                    natList.innerHTML += `
+                        <li class="flex justify-between items-center py-1">
+                            <span class="text-slate-700">${item.nationality}</span>
+                            <span class="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded text-[10px]">${item.count} POIs</span>
+                        </li>
+                    `;
+                });
+
+            } catch (err) {
+                console.error('Failed to load analytics:', err);
+            }
+        }
+
+        function refreshAllData() {
+            fetchQueue();
+            loadAnalytics();
+        }
+
+        refreshAllData();
     </script>
 </body>
 </html>
