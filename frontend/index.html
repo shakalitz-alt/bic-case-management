@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIC Admissions Review Dashboard - PNGICSA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { navy: '#0F1E36', red: '#8B0000', gold: '#D4AF37' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation -->
+    <header class="bg-brand-navy text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <!-- AFTER (Using New Official ICSA Logo) -->
+<div class="flex items-center space-x-4">
+    <!-- Image Logo with white background badge for contrast -->
+    <div class="bg-white p-1.5 rounded-lg shadow-sm flex items-center justify-center">
+        <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="h-10 w-auto object-contain">
+    </div>
+    <div>
+        <h1 class="font-bold text-base leading-tight tracking-wide text-white">BOMANA IMMIGRATION CENTRE (BIC)</h1>
+        <p class="text-[11px] text-amber-400 font-medium">Pre-Admission Custody & Case Management System</p>
+    </div>
+</div>
+            <div class="flex items-center space-x-3">
+                <div class="text-right text-xs">
+                    <div class="font-semibold">Duty Manager Kila</div>
+                    <div class="text-amber-400 text-[10px]">Operations & Security</div>
+                </div>
+                <div class="w-9 h-9 bg-slate-700 rounded-full border border-amber-500/50 flex items-center justify-center font-bold text-xs text-amber-400">MK</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Admissions Review Dashboard</h2>
+                <p class="text-sm text-slate-500">Live feed from BIC Case Management Database</p>
+            </div>
+            <button onclick="fetchQueue()" class="bg-brand-navy text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition">
+                <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Queue
+            </button>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500">PENDING QUEUE</p>
+                <h3 id="queueCount" class="text-2xl font-extrabold text-slate-900 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500">APPROVED (EN ROUTE)</p>
+                <h3 class="text-2xl font-extrabold text-emerald-600 mt-1">12</h3>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500">DEFERRED / ACTION</p>
+                <h3 class="text-2xl font-extrabold text-amber-600 mt-1">2</h3>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-semibold text-slate-500">FACILITY ROOMS</p>
+                <h3 class="text-2xl font-extrabold text-blue-600 mt-1">84 / 122</h3>
+            </div>
+        </div>
+
+        <!-- Live Submissions Queue -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-list-check mr-2"></i> PACIR Admission Queue</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 border-b text-[11px] font-bold text-slate-500 uppercase">
+                            <th class="py-3 px-4">PACIR Ref #</th>
+                            <th class="py-3 px-4">POI Name</th>
+                            <th class="py-3 px-4">Nationality</th>
+                            <th class="py-3 px-4">Priority</th>
+                            <th class="py-3 px-4">Risk Level</th>
+                            <th class="py-3 px-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queueTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                        <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading queue...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3005/v1/admissions/queue';
+
+        async function fetchQueue() {
+            try {
+                const res = await fetch(API_URL);
+                const result = await res.json();
+                
+                document.getElementById('queueCount').innerText = result.count || 0;
+                const tbody = document.getElementById('queueTableBody');
+                tbody.innerHTML = '';
+
+                if (!result.data || result.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No active reports in queue.</td></tr>`;
+                    return;
+                }
+
+                result.data.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3 px-4 font-bold text-slate-900">${item.pacir_ref_number}</td>
+                            <td class="py-3 px-4 font-bold text-slate-800">${item.given_names} ${item.surname}</td>
+                            <td class="py-3 px-4">${item.nationality}</td>
+                            <td class="py-3 px-4"><span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.priority}</span></td>
+                            <td class="py-3 px-4"><span class="bg-red-50 text-red-700 font-bold px-2.5 py-1 rounded-full text-[10px]">${item.overall_calculated_risk}</span></td>
+                            <td class="py-3 px-4 text-right">
+                                <button class="bg-brand-navy hover:bg-slate-800 text-white font-semibold px-3 py-1.5 rounded text-xs">Review</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Failed to load queue:", err);
+            }
+        }
+
+        // Load queue on page load
+        fetchQueue();
+    </script>
+</body>
+</html>
