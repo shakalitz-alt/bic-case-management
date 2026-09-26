@@ -644,6 +644,141 @@ app.post('/v1/deportations/register', authenticateToken, async (req, res) => {
     }
 });
 
+// ============================================================
+// PHASE 2 API ENDPOINTS: MEDICAL & PROPERTY CUSTODY
+// ============================================================
+
+// 1. GET MEDICAL RECORD FOR A POI
+app.get('/v1/medical/:pacir_id', authenticateToken, async (req, res) => {
+    try {
+        const { pacir_id } = req.params;
+        const result = await pool.query(
+            `SELECT m.*, u.full_name as officer_name 
+             FROM poi_medical_records m 
+             LEFT JOIN system_users u ON m.medical_officer_id = u.user_id 
+             WHERE m.pacir_id = $1`,
+            [pacir_id]
+        );
+        res.json({ status: 'SUCCESS', record: result.rows[0] || null });
+    } catch (err) {
+        console.error('Error fetching medical record:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 2. SAVE OR UPDATE POI MEDICAL SCREENING & TRAVEL FITNESS
+app.post('/v1/medical', authenticateToken, async (req, res) => {
+    try {
+        const {
+            pacir_id, blood_pressure, pulse_rate, temperature_c,
+            pre_existing_conditions, allergies, medication_prescribed,
+            contagious_disease_risk, suicide_watch_active, isolation_required,
+            fit_for_detention, fit_for_travel, notes
+        } = req.body;
+
+        const officer_id = req.user.user_id;
+
+        const checkExisting = await pool.query('SELECT medical_id FROM poi_medical_records WHERE pacir_id = $1', [pacir_id]);
+
+        if (checkExisting.rows.length > 0) {
+            await pool.query(
+                `UPDATE poi_medical_records SET
+                    medical_officer_id = $1, blood_pressure = $2, pulse_rate = $3, temperature_c = $4,
+                    pre_existing_conditions = $5, allergies = $6, medication_prescribed = $7,
+                    contagious_disease_risk = $8, suicide_watch_active = $9, isolation_required = $10,
+                    fit_for_detention = $11, fit_for_travel = $12, notes = $13, updated_at = CURRENT_TIMESTAMP
+                 WHERE pacir_id = $14`,
+                [
+                    officer_id, blood_pressure, pulse_rate, temperature_c,
+                    pre_existing_conditions, allergies, medication_prescribed,
+                    contagious_disease_risk, suicide_watch_active, isolation_required,
+                    fit_for_detention, fit_for_travel, notes, pacir_id
+                ]
+            );
+        } else {
+            await pool.query(
+                `INSERT INTO poi_medical_records (
+                    pacir_id, medical_officer_id, intake_screening_completed, blood_pressure, pulse_rate, temperature_c,
+                    pre_existing_conditions, allergies, medication_prescribed, contagious_disease_risk,
+                    suicide_watch_active, isolation_required, fit_for_detention, fit_for_travel, notes
+                ) VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                [
+                    pacir_id, officer_id, blood_pressure, pulse_rate, temperature_c,
+                    pre_existing_conditions, allergies, medication_prescribed, contagious_disease_risk,
+                    suicide_watch_active, isolation_required, fit_for_detention, fit_for_travel, notes
+                ]
+            );
+        }
+
+        // Log Audit Trail
+        await pool.query(
+            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
+            [officer_id, 'MEDICAL_RECORD_UPDATED', `PACIR: ${pacir_id}`]
+        );
+
+        res.json({ status: 'SUCCESS', message: 'Medical Record Saved Successfully' });
+    } catch (err) {
+        console.error('Error saving medical record:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 3. GET PROPERTY BAG ITEMS FOR A POI
+app.get('/v1/property/:pacir_id', authenticateToken, async (req, res) => {
+    try {
+        const { pacir_id } = req.params;
+        const result = await pool.query(
+            `SELECT p.*, u.full_name as receiving_officer 
+             FROM poi_property_custody p 
+             LEFT JOIN system_users u ON p.receiving_officer_id = u.user_id 
+             WHERE p.pacir_id = $1 ORDER BY p.intake_timestamp DESC`,
+            [pacir_id]
+        );
+        res.json({ status: 'SUCCESS', items: result.rows });
+    } catch (err) {
+        console.error('Error fetching property items:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 4. ADD PROPERTY ITEM WITH QR BAG TAG
+app.post('/v1/property', authenticateToken, async (req, res) => {
+    try {
+        const {
+            pacir_id, item_category, item_description, serial_number,
+            estimated_val_pgk, storage_locker_number, notes
+        } = req.body;
+
+        const receiving_officer_id = req.user.user_id;
+        const bag_tag_qr_code = `BAG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        const result = await pool.query(
+            `INSERT INTO poi_property_custody (
+                pacir_id, receiving_officer_id, bag_tag_qr_code, item_category, item_description,
+                serial_number, estimated_val_pgk, storage_locker_number, notes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING property_id, bag_tag_qr_code`,
+            [
+                pacir_id, receiving_officer_id, bag_tag_qr_code, item_category, item_description,
+                serial_number, estimated_val_pgk || 0, storage_locker_number, notes
+            ]
+        );
+
+        // Log Audit Trail
+        await pool.query(
+            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
+            [receiving_officer_id, 'PROPERTY_ITEM_LOGGED', `Tag: ${bag_tag_qr_code}`]
+        );
+
+        res.json({
+            status: 'SUCCESS',
+            message: 'Property Item Registered into Custody',
+            item: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Error logging property item:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
 // START SERVER
 app.listen(port, () => {
     console.log(`=================================================`);
