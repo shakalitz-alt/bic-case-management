@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIC Admissions Review Dashboard - PNGICSA</title>
+    <title>PNGICSA - BIC Case Management & PACIR System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -11,7 +11,14 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: { navy: '#0F1E36', red: '#8B0000', gold: '#D4AF37' }
+                        brand: {
+                            navy: '#0b192c',
+                            sidebar: '#e2e8f0',
+                            red: '#b80d19',
+                            darkRed: '#8b0000',
+                            gold: '#d4af37',
+                            bg: '#f8fafc'
+                        }
                     }
                 }
             }
@@ -19,168 +26,923 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-brand-bg font-sans text-slate-800 antialiased min-h-screen">
 
-    <!-- Header with Official PNGICSA Branding -->
-    <header class="bg-brand-navy text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <div class="bg-white p-1 rounded-lg shadow-sm flex items-center justify-center">
-                    <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="h-10 w-auto object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\"fa-solid fa-shield-halved text-brand-red text-2xl\"></i>';">
+    <!-- 1. AUTHENTICATED LOGIN SCREEN -->
+    <div id="loginScreen" class="fixed inset-0 z-50 bg-slate-100 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-8 space-y-6 relative overflow-hidden flex flex-col">
+            <div class="h-1.5 bg-brand-red absolute top-0 left-0 right-0"></div>
+            
+            <div class="text-center space-y-2">
+                <div class="h-20 flex items-center justify-center">
+                    <img id="loginLogoImg" 
+                         src="assets/ICSA LOGO.png" 
+                         alt="PNGICSA Logo" 
+                         class="h-20 w-auto object-contain mx-auto" 
+                         onerror="this.style.display='none'">
+                </div>
+                <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-3">PNG <span class="text-brand-red">BIC Management</span></h2>
+                <p class="text-xs text-slate-500 max-w-xs mx-auto">Authenticate with official credentials to access the Bomana Centre platform.</p>
+            </div>
+
+            <form onsubmit="handleAuthLogin(event)" class="space-y-4 pt-2 w-full">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="usernameInput" required value="sys.admin" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:bg-white text-slate-900 font-medium">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-sm"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="passwordInput" required value="AdminPass2026!" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:bg-white text-slate-900 font-medium">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-brand-red hover:bg-brand-darkRed text-white font-bold py-3 rounded-lg text-sm shadow-md transition flex items-center justify-center space-x-2">
+                    <span>Login & Issue Session Token</span>
+                    <i class="fa-solid fa-key text-xs"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. MAIN APPLICATION WORKSPACE -->
+    <div id="appWorkspace" class="hidden min-h-screen flex flex-row">
+
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-slate-200/80 text-slate-700 border-r border-slate-300 flex flex-col justify-between flex-shrink-0 min-h-screen">
+            <div>
+                <div class="p-4 border-b border-slate-300/80 flex items-center justify-center bg-slate-300/30">
+                    <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="w-full max-h-12 object-contain" onerror="this.style.display='none'; document.getElementById('sidebarFallbackHeader').classList.remove('hidden');">
+                    <div id="sidebarFallbackHeader" class="hidden flex items-center space-x-2 text-brand-navy">
+                        <i class="fa-solid fa-shield-halved text-brand-red text-xl"></i>
+                        <span class="font-extrabold text-xs tracking-wider">ICSA PNG BIC</span>
+                    </div>
+                </div>
+
+                <div class="px-4 py-2.5 bg-slate-300/60 border-b border-slate-300 flex items-center space-x-2">
+                    <span class="h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span id="sidebarRoleLabel" class="text-[11px] font-extrabold text-slate-800 tracking-wider uppercase">SYSTEM ADMIN</span>
+                </div>
+
+                <nav class="px-3 py-4 space-y-6 text-xs">
+                    <div>
+                        <div class="px-3 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-2">Command & Analytics</div>
+                        <ul class="space-y-1">
+                            <li>
+                                <button onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-brand-navy text-white font-bold border-l-4 border-brand-red shadow-sm">
+                                    <i class="fa-solid fa-chart-line w-4"></i>
+                                    <span>Operations Overview</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="switchTab('admissions')" id="nav-admissions" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <div class="flex items-center space-x-3">
+                                        <i class="fa-solid fa-list-check w-4"></i>
+                                        <span>PACIR Admissions</span>
+                                    </div>
+                                    <span id="sidebarQueueBadge" class="bg-brand-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <div class="px-3 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-2">Facility & Operations</div>
+                        <ul class="space-y-1">
+                            <li>
+                                <button onclick="switchTab('compounds')" id="nav-compounds" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-building-user w-4"></i>
+                                    <span>Compound Allocations</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="switchTab('pois')" id="nav-pois" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-passport w-4"></i>
+                                    <span>POI Case Files</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="switchTab('deportations')" id="nav-deportations" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-plane-departure w-4"></i>
+                                    <span>Deportation & Logistics</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div id="adminNavSection">
+                        <div class="px-3 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-2">System Administration</div>
+                        <ul class="space-y-1">
+                            <li>
+                                <button onclick="switchTab('sysadmin')" id="nav-sysadmin" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-sliders w-4"></i>
+                                    <span>Audit & Diagnostics</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="p-3 border-t border-slate-300">
+                <button onclick="handleLogout()" class="w-full bg-brand-red hover:bg-brand-darkRed text-white font-bold py-2.5 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- RIGHT CONTENT WORKSPACE -->
+        <div class="flex-1 flex flex-col min-w-0 min-h-screen bg-brand-bg">
+            
+            <header class="bg-white border-b border-slate-200 h-16 px-6 flex items-center justify-between sticky top-0 z-20">
+                <div class="flex items-center space-x-4 flex-1 max-w-lg">
+                    <div class="relative w-full">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" placeholder="Search POI name, PACIR ref, or passport number..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-red focus:bg-white text-slate-800 font-medium">
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="text-slate-500 hover:text-slate-800 relative p-1.5 rounded-full hover:bg-slate-100 transition">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="absolute top-1 right-1 w-2 h-2 bg-brand-red rounded-full"></span>
+                        </button>
+                    </div>
+
+                    <div class="h-6 w-px bg-slate-200"></div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                            <div id="headerUserName" class="text-xs font-bold text-slate-900">System Administrator</div>
+                            <div id="headerUserSub" class="text-[10px] font-semibold text-slate-500">ICT Infrastructure & Security</div>
+                        </div>
+                        <div id="headerUserAvatar" class="w-9 h-9 bg-brand-navy rounded-full text-white font-bold text-xs flex items-center justify-center border-2 border-brand-red">
+                            SA
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 p-6 space-y-6">
+
+                <!-- ALERT BANNER -->
+                <div id="operationalAlertBanner" class="hidden bg-red-600 text-white p-4 rounded-xl shadow-lg border border-red-700 flex items-center justify-between animate-pulse">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl text-yellow-300"></i>
+                        <div>
+                            <h4 class="font-black text-xs uppercase tracking-wider text-yellow-300">CRITICAL OPERATIONAL ALERTS DETECTED</h4>
+                            <p id="alertBannerText" class="text-xs font-semibold mt-0.5">High-risk admissions require immediate review.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="switchTab('admissions')" class="bg-white text-red-700 font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-slate-100 transition shadow">
+                            Review Queue
+                        </button>
+                        <button onclick="dismissAlertBanner()" class="text-white/80 hover:text-white px-2 py-1 text-xs">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BREADCRUMB -->
+                <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                    <div>
+                        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">BIC COMMAND <span class="text-slate-300">/</span> <span id="breadcrumbCurrent">OVERVIEW</span></div>
+                        <h2 id="viewTitle" class="text-2xl font-black text-slate-900 mt-0.5">Operations Overview Console</h2>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <i class="fa-solid fa-shield-halved text-amber-600 mr-1.5"></i> Assigned Role: <span id="roleBadgeLabel" class="ml-1 uppercase">SYSTEM ADMIN</span>
+                        </span>
+                        <button onclick="refreshAllData()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                            <span>Sync Live Feeds</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. OVERVIEW TAB -->
+                <div id="view-overview" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                        <div class="bg-white p-5 rounded-xl border-t-4 border-brand-red border-x border-b border-slate-200 shadow-sm relative overflow-hidden">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending Admissions</p>
+                                    <h3 id="cardQueueCount" class="text-3xl font-black text-slate-900 mt-1">0</h3>
+                                    <p class="text-[11px] font-medium text-slate-500 mt-1">Requires DM review</p>
+                                </div>
+                                <div class="p-2.5 bg-red-50 text-brand-red rounded-lg"><i class="fa-solid fa-clock-rotate-left text-lg"></i></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">En Route / Approved</p>
+                                    <h3 class="text-3xl font-black text-emerald-600 mt-1">12</h3>
+                                    <p class="text-[11px] font-medium text-slate-500 mt-1">Transfer in progress</p>
+                                </div>
+                                <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-truck-ramp-box text-lg"></i></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Deferred Action</p>
+                                    <h3 class="text-3xl font-black text-amber-600 mt-1">2</h3>
+                                    <p class="text-[11px] font-medium text-slate-500 mt-1">Awaiting medical clearance</p>
+                                </div>
+                                <div class="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-lg"></i></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facility Occupancy</p>
+                                    <h3 class="text-3xl font-black text-slate-900 mt-1">84 <span class="text-sm font-bold text-slate-400">/ 122</span></h3>
+                                    <p class="text-[11px] font-medium text-slate-500 mt-1">68.8% Total Capacity</p>
+                                </div>
+                                <div class="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-building-shield text-lg"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>POI Risk Level Breakdown</span>
+                                <i class="fa-solid fa-chart-pie text-slate-400"></i>
+                            </h4>
+                            <div class="h-56 relative flex items-center justify-center">
+                                <canvas id="riskChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>Compound Occupancy Tracker</span>
+                                <i class="fa-solid fa-chart-simple text-slate-400"></i>
+                            </h4>
+                            <div class="h-56 relative flex items-center justify-center">
+                                <canvas id="capacityChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>Top Intakes by Nationality</span>
+                                <i class="fa-solid fa-flag text-slate-400"></i>
+                            </h4>
+                            <ul id="nationalityList" class="divide-y divide-slate-100 text-xs font-medium space-y-2 pt-2">
+                                <li class="text-slate-400">Loading analytics...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PACIR ADMISSIONS TAB -->
+                <div id="view-admissions" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-list-check mr-2 text-brand-red"></i>
+                                <span>Active PACIR Admissions Queue (Form BIC-01)</span>
+                            </h3>
+                            <button onclick="openIntakeModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>New PACIR Intake (BIC-01)</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">PACIR Ref #</th>
+                                        <th class="py-3 px-4">POI Name</th>
+                                        <th class="py-3 px-4">Nationality</th>
+                                        <th class="py-3 px-4">Priority</th>
+                                        <th class="py-3 px-4">Risk Level</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="queueTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading queue...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. COMPOUND ALLOCATIONS TAB -->
+                <div id="view-compounds" class="hidden space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 uppercase">Bomana Immigration Centre Facilities</h3>
+                            <p class="text-xs text-slate-500">Real-Time Bed-Space Capacity & Risk Segregation Control</p>
+                        </div>
+                        <button onclick="loadCompoundOccupancy()" class="bg-brand-navy hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                            <span>Refresh Capacity</span>
+                        </button>
+                    </div>
+
+                    <div id="compoundsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="p-6 bg-white rounded-xl border text-center text-slate-400">Loading compound inventory...</div>
+                    </div>
+                </div>
+
+                <!-- 4. POI CASE FILES TAB -->
+                <div id="view-pois" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-folder-open mr-2 text-brand-red"></i>
+                                <span>POI Master Case File Registry</span>
+                            </h3>
+                            <span class="text-xs font-semibold text-slate-500">Centralized Legal & Intake Directory</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Case File #</th>
+                                        <th class="py-3 px-4">PACIR Ref #</th>
+                                        <th class="py-3 px-4">POI Name</th>
+                                        <th class="py-3 px-4">Passport #</th>
+                                        <th class="py-3 px-4">Risk Level</th>
+                                        <th class="py-3 px-4">Compound Allocation</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="casesTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="7" class="p-4 text-center text-slate-400">Loading master registry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. DEPORTATIONS TAB -->
+                <div id="view-deportations" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-plane-departure mr-2 text-brand-red"></i>
+                                <span>Deportation, Voluntary Return & Removal Pipeline</span>
+                            </h3>
+                            <button onclick="openDeportationModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>New Removal Dispatch</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Order Ref #</th>
+                                        <th class="py-3 px-4">POI Name</th>
+                                        <th class="py-3 px-4">Type</th>
+                                        <th class="py-3 px-4">Destination</th>
+                                        <th class="py-3 px-4">CTD Document</th>
+                                        <th class="py-3 px-4">Flight / Route</th>
+                                        <th class="py-3 px-4">Stage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deportationTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="7" class="p-4 text-center text-slate-400">Loading deportation pipeline...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. SYSADMIN TAB WITH DIAGNOSTICS GRID -->
+                <div id="view-sysadmin" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-users-gear mr-2 text-brand-red"></i>
+                                <span>Authorized Operators & RBAC Roles</span>
+                            </h3>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="triggerManualBackup()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-database"></i>
+                                    <span>Run Manual Backup</span>
+                                </button>
+                                <button onclick="openUserModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-user-plus text-[10px]"></i>
+                                    <span>Add New Operator</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100 border-b text-[11px] font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Operator Name</th>
+                                        <th class="py-3 px-4">Username</th>
+                                        <th class="py-3 px-4">Email</th>
+                                        <th class="py-3 px-4">Role Delegation</th>
+                                        <th class="py-3 px-4">Status</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading user registry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3-COLUMN DIAGNOSTICS GRID -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>Database Connection</span>
+                                <i class="fa-solid fa-database text-emerald-600"></i>
+                            </h4>
+                            <div class="text-xs space-y-1 font-mono text-slate-600">
+                                <p><span class="font-bold text-slate-800">Host:</span> localhost:5432</p>
+                                <p><span class="font-bold text-slate-800">Database:</span> bic_casemanagement</p>
+                                <p><span class="font-bold text-slate-800">Pool Size:</span> Max 20 Clients</p>
+                                <p class="text-emerald-600 font-bold mt-2"><i class="fa-solid fa-circle text-[8px] mr-1"></i> ACTIVE (0ms latency)</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>Node.js PM2 Service</span>
+                                <i class="fa-solid fa-server text-blue-600"></i>
+                            </h4>
+                            <div class="text-xs space-y-1 font-mono text-slate-600">
+                                <p><span class="font-bold text-slate-800">Process:</span> bic-api (PM2)</p>
+                                <p><span class="font-bold text-slate-800">Port:</span> 3005</p>
+                                <p><span class="font-bold text-slate-800">Runtime:</span> Express.js v4.18</p>
+                                <p class="text-blue-600 font-bold mt-2"><i class="fa-solid fa-circle text-[8px] mr-1"></i> ONLINE (Auto-Restart Enabled)</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span>IIS Reverse Proxy</span>
+                                <i class="fa-solid fa-network-wired text-brand-red"></i>
+                            </h4>
+                            <div class="text-xs space-y-1 font-mono text-slate-600">
+                                <p><span class="font-bold text-slate-800">Site Port:</span> 8088</p>
+                                <p><span class="font-bold text-slate-800">Rewrite Rules:</span> /v1/* -> 3005</p>
+                                <p><span class="font-bold text-slate-800">Engine:</span> ARR 3.0 / URL Rewrite 2.1</p>
+                                <p class="text-emerald-600 font-bold mt-2"><i class="fa-solid fa-circle text-[8px] mr-1"></i> PROXIED</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-shield-halved mr-2 text-brand-red"></i>
+                                <span>System Audit Trail & Operational Logs</span>
+                            </h3>
+                            <button onclick="loadAuditLogs()" class="bg-brand-navy hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                <span>Refresh Logs</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 border-b text-[11px] font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Timestamp</th>
+                                        <th class="py-3 px-4">Operator</th>
+                                        <th class="py-3 px-4">Role</th>
+                                        <th class="py-3 px-4">Action</th>
+                                        <th class="py-3 px-4">Resource</th>
+                                        <th class="py-3 px-4">IP Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogsTableBody" class="divide-y divide-slate-200 text-xs font-mono text-slate-700">
+                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading audit trail...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- INTAKE MODAL (FORM BIC-01) -->
+    <div id="intakeModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-8 overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-file-circle-plus text-brand-red text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-wide">PACIR INTAKE REGISTRATION (FORM BIC-01)</h3>
+                        <p class="text-[10px] text-slate-300">PNGICSA Bomana Immigration Centre Operational Platform</p>
+                    </div>
+                </div>
+                <button onclick="closeIntakeModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="intakeForm" onsubmit="submitIntakeForm(event)" class="p-6 space-y-5 text-xs font-medium">
+                <div>
+                    <h4 class="font-bold text-slate-900 uppercase border-b border-slate-200 pb-1 mb-3 text-[11px] text-brand-navy flex items-center">
+                        <i class="fa-solid fa-user-shield mr-2 text-brand-red"></i> 1. POI Personal Identification
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Surname / Family Name *</label>
+                            <input type="text" id="intakeSurname" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Given Names *</label>
+                            <input type="text" id="intakeGivenNames" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Date of Birth *</label>
+                            <input type="date" id="intakeDob" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Gender *</label>
+                            <select id="intakeGender" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                                <option value="MALE">MALE</option>
+                                <option value="FEMALE">FEMALE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Nationality *</label>
+                            <input type="text" id="intakeNationality" required placeholder="e.g. China, Philippines" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Passport Number</label>
+                            <input type="text" id="intakePassport" placeholder="e.g. E92018821" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-900 uppercase border-b border-slate-200 pb-1 mb-3 text-[11px] text-brand-navy flex items-center">
+                        <i class="fa-solid fa-gavel mr-2 text-brand-red"></i> 2. Enforcement & Apprehension
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Immigration Status *</label>
+                            <input type="text" id="intakeStatus" required value="Overstayed Visa" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Apprehension Ref No *</label>
+                            <input type="text" id="intakeAppNo" required placeholder="ENF-2026-001" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Priority Level *</label>
+                            <select id="intakePriority" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
+                                <option value="NORMAL">NORMAL</option>
+                                <option value="IMMEDIATE">IMMEDIATE (Priority Processing)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Referring Unit</label>
+                            <input type="text" id="intakeUnit" value="Compliance Operations Unit" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-red-50 p-4 rounded-xl border border-red-200 space-y-2">
+                    <h4 class="font-bold text-red-900 uppercase text-[11px] flex items-center">
+                        <i class="fa-solid fa-triangle-exclamation mr-2 text-brand-red"></i> 3. Immediate Risk Screening Matrix
+                    </h4>
+                    <div class="space-y-2 pt-1 text-slate-800">
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="intakeHandcuffs" class="rounded text-brand-red focus:ring-brand-red h-4 w-4">
+                            <span class="font-bold">Handcuffs / Physical Restraints Applied During Transport</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="intakeSuicide" class="rounded text-brand-red focus:ring-brand-red h-4 w-4">
+                            <span class="font-bold text-red-700">Suicide Watch / Self-Harm Risk Identified (Triggers Mandatory Isolation)</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="intakeMedical" class="rounded text-brand-red focus:ring-brand-red h-4 w-4">
+                            <span class="font-bold text-amber-700">Immediate Medical Attention Required</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeIntakeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red hover:bg-brand-darkRed text-white font-bold rounded-lg shadow flex items-center space-x-2">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Submit & Generate PACIR Report</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEGAL MODAL -->
+    <div id="legalModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-scale-balanced text-amber-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-wide">COURT PROCEEDINGS & INJUNCTIONS</h3>
+                        <p id="legalModalPoiName" class="text-[10px] text-slate-300">POI Legal Filing</p>
+                    </div>
+                </div>
+                <button onclick="closeLegalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="p-4 bg-slate-100 border-b border-slate-200 max-h-36 overflow-y-auto">
+                <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Saved Court Filings & Injunction History</h4>
+                <div id="legalHistoryContainer" class="space-y-2 text-xs">
+                    <p class="text-slate-400 italic">No court filings recorded for this POI.</p>
+                </div>
+            </div>
+
+            <form onsubmit="submitLegalRecord(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="legalPacirId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Jurisdiction / Court *</label>
+                        <select id="legalCourtName" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
+                            <option value="National Court of PNG">National Court of PNG</option>
+                            <option value="Supreme Court of PNG">Supreme Court of PNG</option>
+                            <option value="District Court Port Moresby">District Court Port Moresby</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Proceeding Type *</label>
+                        <select id="legalProceedingType" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
+                            <option value="BAIL_APPLICATION">Bail Application</option>
+                            <option value="HABEAS_CORPUS">Habeas Corpus Petition</option>
+                            <option value="JUDICIAL_REVIEW">Judicial Review</option>
+                            <option value="DEPORTATION_INJUNCTION">Deportation Injunction</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Court Case Ref # *</label>
+                        <input type="text" id="legalCaseRef" required placeholder="OS-2026-008" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Legal Counsel / Law Firm</label>
+                        <input type="text" id="legalRepresentation" placeholder="e.g. Pacific Legal Chambers" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Next Hearing Date</label>
+                        <input type="date" id="legalHearingDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Case Status *</label>
+                        <select id="legalCaseStatus" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
+                            <option value="PENDING">PENDING</option>
+                            <option value="INJUNCTION_ACTIVE">INJUNCTION ACTIVE (STAY ON REMOVAL)</option>
+                            <option value="DISMISSED">DISMISSED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="legalInjunctionGranted" class="rounded text-amber-600 focus:ring-amber-500 h-4 w-4">
+                        <span class="font-bold text-amber-900">Court Injunction Granted (Halts Removal / Transfer Operations)</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Legal Directives / Notes</label>
+                    <textarea id="legalNotes" rows="2" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red" placeholder="Add directives from High Court order..."></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeLegalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">Save Legal Filing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- RESET PASSWORD MODAL -->
+    <div id="resetPasswordModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-key text-amber-400"></i>
+                    <h3 class="font-bold text-sm tracking-wide">RESET OPERATOR PASSWORD</h3>
+                </div>
+                <button onclick="closeResetPasswordModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitResetPassword(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="resetUserId">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Operator Account</label>
+                    <input type="text" id="resetUsernameDisplay" disabled class="w-full px-3 py-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
                 </div>
                 <div>
-                    <h1 class="font-bold text-base leading-tight tracking-wide text-white">BOMANA IMMIGRATION CENTRE (BIC)</h1>
-                    <p class="text-[11px] text-amber-400 font-medium">Pre-Admission Custody & Case Management System</p>
+                    <label class="block text-slate-700 font-bold mb-1">New Password *</label>
+                    <input type="password" id="resetNewPassword" required placeholder="Enter new password" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
                 </div>
-            </div>
-            <div class="flex items-center space-x-3">
-                <div class="text-right text-xs">
-                    <div class="font-semibold">Duty Manager Kila</div>
-                    <div class="text-amber-400 text-[10px]">Operations & Security</div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">Reset Password</button>
                 </div>
-                <div class="w-9 h-9 bg-slate-700 rounded-full border border-amber-500/50 flex items-center justify-center font-bold text-xs text-amber-400">MK</div>
-            </div>
+            </form>
         </div>
-    </header>
-
-    <!-- Main Workspace -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
-        <div class="flex justify-between items-center">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-900">Admissions Review Dashboard</h2>
-                <p class="text-sm text-slate-500">Live feed from BIC Case Management Database</p>
-            </div>
-            <button onclick="refreshAllData()" class="bg-brand-navy text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition">
-                <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Dashboard
-            </button>
-        </div>
-
-        <!-- Operational Metrics Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">PENDING QUEUE</p>
-                <h3 id="queueCount" class="text-2xl font-extrabold text-slate-900 mt-1">0</h3>
-            </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">APPROVED (EN ROUTE)</p>
-                <h3 class="text-2xl font-extrabold text-emerald-600 mt-1">12</h3>
-            </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">DEFERRED / ACTION</p>
-                <h3 class="text-2xl font-extrabold text-amber-600 mt-1">2</h3>
-            </div>
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">FACILITY ROOMS</p>
-                <h3 class="text-2xl font-extrabold text-blue-600 mt-1">84 / 122</h3>
-            </div>
-        </div>
-
-        <!-- Live Submissions Queue -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-list-check mr-2"></i> PACIR Admission Queue</h3>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100 border-b text-[11px] font-bold text-slate-500 uppercase">
-                            <th class="py-3 px-4">PACIR Ref #</th>
-                            <th class="py-3 px-4">POI Name</th>
-                            <th class="py-3 px-4">Nationality</th>
-                            <th class="py-3 px-4">Priority</th>
-                            <th class="py-3 px-4">Risk Level</th>
-                            <th class="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="queueTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
-                        <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading queue...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Executive Analytics Section -->
-        <div class="space-y-4 pt-4">
-            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
-                <h3 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
-                    <i class="fa-solid fa-chart-pie text-brand-red"></i>
-                    <span>Executive Analytics & Facility Snapshot</span>
-                </h3>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Risk Level Donut Chart -->
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">POI Risk Level Breakdown</h4>
-                    <div class="h-56 relative flex items-center justify-center">
-                        <canvas id="riskChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Compound Capacity Bar Chart -->
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Compound Occupancy Tracker</h4>
-                    <div class="h-56 relative flex items-center justify-center">
-                        <canvas id="capacityChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Top Nationalities List -->
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Top Intakes by Nationality</h4>
-                    <ul id="nationalityList" class="divide-y divide-slate-100 text-xs font-medium space-y-2 pt-2">
-                        <li class="text-slate-400">Loading analytics...</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </main>
+    </div>
 
     <script>
-        const API_BASE = '/v1'; // IIS Reverse Proxy Routes
-
+        const API_BASE = '/v1';
+        let authToken = localStorage.getItem('bic_auth_token') || null;
         let riskChartInstance = null;
         let capacityChartInstance = null;
+        let cachedCompoundsList = [];
+        let cachedPoisList = [];
+
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            };
+        }
+
+        async function handleAuthLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('usernameInput').value;
+            const password = document.getElementById('passwordInput').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await res.json();
+
+                if (result.status === 'SUCCESS') {
+                    authToken = result.token;
+                    localStorage.setItem('bic_auth_token', authToken);
+                    localStorage.setItem('bic_active_user', JSON.stringify(result.user));
+
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('appWorkspace').classList.remove('hidden');
+
+                    document.getElementById('headerUserName').innerText = result.user.full_name;
+                    document.getElementById('sidebarRoleLabel').innerText = result.user.role.replace('_', ' ');
+
+                    if (result.user.role === 'SYSTEM_ADMIN') {
+                        document.getElementById('adminNavSection').style.display = 'block';
+                    } else {
+                        document.getElementById('adminNavSection').style.display = 'none';
+                    }
+
+                    switchTab('overview');
+                    refreshAllData();
+                } else {
+                    alert(`Authentication Failed: ${result.message}`);
+                }
+            } catch (err) {
+                alert('Network error during authentication.');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('bic_auth_token');
+            localStorage.removeItem('bic_active_user');
+            authToken = null;
+
+            document.getElementById('appWorkspace').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function switchTab(tabKey) {
+            const views = ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'sysadmin'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.add('hidden');
+                
+                const navBtn = document.getElementById(`nav-${v}`);
+                if (navBtn) {
+                    navBtn.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition";
+                }
+            });
+
+            const activeView = document.getElementById(`view-${tabKey}`);
+            if (activeView) activeView.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`nav-${tabKey}`);
+            if (activeBtn) {
+                activeBtn.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-brand-navy text-white font-bold border-l-4 border-brand-red shadow-sm";
+            }
+
+            document.getElementById('breadcrumbCurrent').innerText = tabKey.toUpperCase();
+            document.getElementById('viewTitle').innerText = `${tabKey.charAt(0).toUpperCase() + tabKey.slice(1)} Management Console`;
+
+            if (tabKey === 'overview') loadAnalytics();
+            else if (tabKey === 'admissions') fetchQueue();
+            else if (tabKey === 'compounds') loadCompoundOccupancy();
+            else if (tabKey === 'pois') loadCasesRegistry();
+            else if (tabKey === 'deportations') loadDeportationsPipeline();
+            else if (tabKey === 'sysadmin') {
+                loadSystemUsers();
+                loadAuditLogs();
+            }
+        }
+
+        function openIntakeModal() {
+            document.getElementById('intakeAppNo').value = 'ENF-2026-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('intakeModal').classList.remove('hidden');
+        }
+
+        function closeIntakeModal() {
+            document.getElementById('intakeModal').classList.add('hidden');
+            document.getElementById('intakeForm').reset();
+        }
+
+        async function submitIntakeForm(event) {
+            event.preventDefault();
+
+            const payload = {
+                surname: document.getElementById('intakeSurname').value,
+                given_names: document.getElementById('intakeGivenNames').value,
+                date_of_birth: document.getElementById('intakeDob').value,
+                gender: document.getElementById('intakeGender').value,
+                nationality: document.getElementById('intakeNationality').value,
+                passport_number: document.getElementById('intakePassport').value,
+                current_immigration_status: document.getElementById('intakeStatus').value,
+                enforcement_apprehension_no: document.getElementById('intakeAppNo').value,
+                priority: document.getElementById('intakePriority').value,
+                referring_unit: document.getElementById('intakeUnit').value,
+                handcuffs_used: document.getElementById('intakeHandcuffs').checked,
+                suicide_risk_identified: document.getElementById('intakeSuicide').checked,
+                immediate_medical_required: document.getElementById('intakeMedical').checked
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/pacir/intake`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'SUCCESS') {
+                    alert(`Intake Registered Successfully!\nPACIR Reference: ${result.pacir_ref_number}`);
+                    closeIntakeModal();
+                    refreshAllData();
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            } catch (err) {
+                console.error('Failed to submit intake form:', err);
+                alert('Network or server error while submitting intake.');
+            }
+        }
 
         async function fetchQueue() {
             try {
-                const res = await fetch(`${API_BASE}/admissions/queue`);
+                const res = await fetch(`${API_BASE}/admissions/queue`, { headers: getAuthHeaders() });
                 const result = await res.json();
-                
-                document.getElementById('queueCount').innerText = result.count || 0;
-                const tbody = document.getElementById('queueTableBody');
-                tbody.innerHTML = '';
-
-                if (!result.data || result.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No active reports in queue.</td></tr>`;
-                    return;
-                }
-
-                result.data.forEach(item => {
-                    tbody.innerHTML += `
+                if (result.data) {
+                    document.getElementById('sidebarQueueBadge').innerText = result.count || 0;
+                    document.getElementById('cardQueueCount').innerText = result.count || 0;
+                    document.getElementById('queueTableBody').innerHTML = result.data.map(item => `
                         <tr class="hover:bg-slate-50 transition">
                             <td class="py-3 px-4 font-bold text-slate-900">${item.pacir_ref_number}</td>
                             <td class="py-3 px-4 font-bold text-slate-800">${item.given_names} ${item.surname}</td>
                             <td class="py-3 px-4">${item.nationality}</td>
                             <td class="py-3 px-4"><span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.priority}</span></td>
                             <td class="py-3 px-4"><span class="bg-red-50 text-red-700 font-bold px-2.5 py-1 rounded-full text-[10px]">${item.overall_calculated_risk}</span></td>
-                            <td class="py-3 px-4 text-right space-x-2">
-                                <a href="${API_BASE}/pacir/${item.pacir_id}/pdf" target="_blank" class="bg-brand-red hover:bg-red-900 text-white font-semibold px-3 py-1.5 rounded text-xs inline-flex items-center space-x-1">
-                                    <i class="fa-solid fa-file-pdf"></i>
-                                    <span>PDF Report</span>
-                                </a>
+                            <td class="py-3 px-4 text-right">
+                                <a href="${API_BASE}/pacir/${item.pacir_id}/pdf" target="_blank" class="bg-brand-red text-white px-2.5 py-1 rounded font-bold">Form BIC-01 PDF</a>
                             </td>
                         </tr>
-                    `;
-                });
-            } catch (err) {
-                console.error("Failed to load queue:", err);
-            }
+                    `).join('');
+                }
+            } catch (err) {}
         }
 
         async function loadAnalytics() {
             try {
-                const res = await fetch(`${API_BASE}/analytics/summary`);
+                const res = await fetch(`${API_BASE}/analytics/summary`, { headers: getAuthHeaders() });
                 const { data } = await res.json();
 
                 if (riskChartInstance) riskChartInstance.destroy();
@@ -210,8 +972,8 @@
                     data: {
                         labels: compoundLabels,
                         datasets: [
-                            { label: 'Occupied', data: occupancyData, backgroundColor: '#0F1E36' },
-                            { label: 'Capacity', data: capacityData, backgroundColor: '#E2E8F0' }
+                            { label: 'Occupied', data: occupancyData, backgroundColor: '#0d1e36' },
+                            { label: 'Total Capacity', data: capacityData, backgroundColor: '#e2e8f0' }
                         ]
                     },
                     options: { responsive: true, maintainAspectRatio: false }
@@ -233,12 +995,416 @@
             }
         }
 
+        async function loadCasesRegistry() {
+            try {
+                if (cachedCompoundsList.length === 0) {
+                    const compRes = await fetch(`${API_BASE}/compounds/occupancy`, { headers: getAuthHeaders() });
+                    const compData = await compRes.json();
+                    cachedCompoundsList = compData.compounds || [];
+                }
+
+                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const result = await res.json();
+                if (result.cases) {
+                    cachedPoisList = result.cases;
+                    document.getElementById('casesTableBody').innerHTML = result.cases.map(c => `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || '<span class="text-amber-600 italic">PENDING</span>'}</td>
+                            <td class="py-3 px-4 font-mono">${c.pacir_ref_number}</td>
+                            <td class="py-3 px-4 font-bold">${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}</td>
+                            <td class="py-3 px-4 uppercase">${c.passport_number || 'N/A'}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${c.overall_calculated_risk === 'CRITICAL' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}">
+                                    ${c.overall_calculated_risk || 'LOW'}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <select onchange="updateCompoundAssignment('${c.pacir_id}', this.value)" class="px-2 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-bold focus:ring-2 focus:ring-brand-navy">
+                                    <option value="" ${!c.allocated_compound_id ? 'selected' : ''}>-- SELECT COMPOUND --</option>
+                                    ${cachedCompoundsList.map(cp => `
+                                        <option value="${cp.compound_id}" ${c.allocated_compound_id === cp.compound_id ? 'selected' : ''}>
+                                            ${cp.compound_name} (${cp.compound_type || 'General'})
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </td>
+                            <td class="py-3 px-4 text-right space-x-1.5">
+                                ${!c.bic_case_file_number ? `
+                                    <button onclick="allocateCaseNumber('${c.pacir_id}')" class="bg-brand-navy hover:bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm">
+                                        Allocate Case File #
+                                    </button>
+                                ` : ''}
+                                <button onclick="openLegalModal('${c.pacir_id}', '${c.surname}', '${c.given_names}')" class="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
+                                    <i class="fa-solid fa-gavel mr-1"></i> Legal Status
+                                </button>
+                                <a href="${API_BASE}/pacir/${c.pacir_id}/pdf" target="_blank" class="bg-brand-red hover:bg-brand-darkRed text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
+                                    <i class="fa-solid fa-file-pdf mr-1"></i> Form BIC-01
+                                </a>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function updateCompoundAssignment(pacirId, compoundId) {
+            try {
+                const res = await fetch(`${API_BASE}/cases/allocate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ pacir_id: pacirId, compound_id: compoundId || null })
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert('Compound Assignment Updated!');
+                    loadCasesRegistry();
+                    loadAnalytics();
+                }
+            } catch (err) {}
+        }
+
+        async function allocateCaseNumber(pacirId) {
+            try {
+                const res = await fetch(`${API_BASE}/cases/allocate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ pacir_id: pacirId })
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert(`Allocated Case File No: ${result.bic_case_file_number}`);
+                    loadCasesRegistry();
+                }
+            } catch (err) {}
+        }
+
+        async function loadCompoundOccupancy() {
+            try {
+                const res = await fetch(`${API_BASE}/compounds/occupancy`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const container = document.getElementById('compoundsContainer');
+                
+                if (!container) return;
+
+                if (!data.compounds || data.compounds.length === 0) {
+                    container.innerHTML = `<div class="col-span-3 p-6 bg-white rounded-xl text-center text-slate-400">No compound data available.</div>`;
+                    return;
+                }
+
+                const totalBeds = data.compounds.reduce((acc, c) => acc + parseInt(c.total_capacity || 0), 0);
+                const occupiedBeds = data.compounds.reduce((acc, c) => acc + parseInt(c.current_occupancy || 0), 0);
+                const availableBeds = totalBeds - occupiedBeds;
+                const totalPct = Math.round((occupiedBeds / totalBeds) * 100);
+
+                let summaryHtml = `
+                    <div class="col-span-1 md:col-span-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 mb-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Bomana Facility Occupancy Summary</h4>
+                                <p class="text-[11px] text-slate-500 font-medium">Total Capacity: <strong>${totalBeds} Beds</strong> | Occupied: <strong class="text-brand-navy">${occupiedBeds}</strong> | Vacant: <strong class="text-emerald-700">${availableBeds}</strong></p>
+                            </div>
+                            <span class="px-3 py-1 text-xs font-extrabold rounded-full ${totalPct > 85 ? 'bg-red-100 text-red-700' : 'bg-brand-navy text-white'}">
+                                ${totalPct}% Overall Occupancy
+                            </span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                            <div class="h-3 rounded-full ${totalPct > 85 ? 'bg-red-600' : 'bg-brand-navy'}" style="width: ${totalPct}%"></div>
+                        </div>
+                    </div>
+                `;
+
+                const cardsHtml = data.compounds.map(comp => {
+                    const pct = Math.round((comp.current_occupancy / comp.total_capacity) * 100);
+                    const barColor = pct > 85 ? 'bg-red-600' : (pct > 50 ? 'bg-amber-500' : 'bg-emerald-600');
+                    const pois = comp.housed_pois || [];
+
+                    return `
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
+                            <div class="p-5 border-b border-slate-100">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 class="font-bold text-sm text-brand-navy uppercase">${comp.compound_name} COMPOUND</h4>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase">${comp.compound_type || 'GENERAL'}</span>
+                                    </div>
+                                    <span class="px-2.5 py-1 text-[11px] font-bold rounded-full ${pct > 85 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'}">
+                                        ${comp.current_occupancy} / ${comp.total_capacity} Beds
+                                    </span>
+                                </div>
+
+                                <div class="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
+                                    <div class="${barColor} h-2 rounded-full" style="width: ${pct}%"></div>
+                                </div>
+                                <div class="text-right text-[10px] font-bold text-slate-500 mt-1">${pct}% Occupied</div>
+                            </div>
+
+                            <div class="p-4 bg-slate-50 space-y-2 flex-1">
+                                <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                    <span>Housed Persons of Interest (${pois.length})</span>
+                                    <i class="fa-solid fa-users text-slate-400"></i>
+                                </div>
+                                
+                                ${pois.length > 0 ? pois.map(p => `
+                                    <div class="p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs space-y-1 text-xs">
+                                        <div class="flex justify-between items-center font-bold text-slate-900">
+                                            <span>${p.surname ? p.surname.toUpperCase() : ''}, ${p.given_names || ''}</span>
+                                            <span class="px-1.5 py-0.5 text-[9px] font-extrabold rounded ${p.risk_level === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'}">
+                                                ${p.risk_level}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                                            <span>File: <strong class="text-brand-navy">${p.bic_case_file_number || 'PENDING'}</strong></span>
+                                            <span>Pass: ${p.passport_number || 'N/A'}</span>
+                                        </div>
+                                        <div class="text-[10px] font-semibold text-slate-600">
+                                            Nationality: <span class="text-slate-800">${p.nationality}</span>
+                                        </div>
+                                    </div>
+                                `).join('') : '<div class="text-xs text-slate-400 italic p-3 text-center bg-white border border-dashed rounded-lg">No POIs currently allocated to this compound.</div>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = summaryHtml + cardsHtml;
+
+            } catch (err) {
+                console.error('Error loading compound occupancy:', err);
+            }
+        }
+
+        async function loadDeportationsPipeline() {
+            try {
+                const res = await fetch(`${API_BASE}/deportations`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.deportations) {
+                    document.getElementById('deportationTableBody').innerHTML = data.deportations.map(d => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold text-brand-red">${d.deportation_order_ref}</td>
+                            <td class="py-3 px-4 font-bold">${d.surname.toUpperCase()}, ${d.given_names}</td>
+                            <td class="py-3 px-4">${d.removal_type}</td>
+                            <td class="py-3 px-4 font-bold">${d.destination_country}</td>
+                            <td class="py-3 px-4">${d.embassy_ctd_status}</td>
+                            <td class="py-3 px-4 font-mono">${d.flight_number || 'TBD'}</td>
+                            <td class="py-3 px-4 font-bold">${d.logistics_status}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function loadSystemUsers() {
+            try {
+                const res = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.users) {
+                    document.getElementById('usersTableBody').innerHTML = data.users.map(u => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold">${u.full_name}</td>
+                            <td class="py-3 px-4 font-mono">${u.username}</td>
+                            <td class="py-3 px-4">${u.email || 'N/A'}</td>
+                            <td class="py-3 px-4">${u.role}</td>
+                            <td class="py-3 px-4">${u.is_active ? 'ACTIVE' : 'INACTIVE'}</td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="openResetPasswordModal('${u.user_id}', '${u.username}')" class="text-[11px] font-bold px-2 py-1 rounded bg-amber-100 text-amber-800"><i class="fa-solid fa-key mr-1"></i> Reset Password</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function loadAuditLogs() {
+            try {
+                const res = await fetch(`${API_BASE}/audit/logs`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.logs) {
+                    document.getElementById('auditLogsTableBody').innerHTML = data.logs.map(l => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-2.5 px-4 text-slate-500">${new Date(l.created_at).toLocaleString()}</td>
+                            <td class="py-2.5 px-4 font-bold text-brand-navy">${l.username}</td>
+                            <td class="py-2.5 px-4">${l.role}</td>
+                            <td class="py-2.5 px-4 font-bold text-brand-red">${l.action_type}</td>
+                            <td class="py-2.5 px-4 text-slate-600">${l.resource_affected || 'N/A'}</td>
+                            <td class="py-2.5 px-4 text-slate-400">${l.ip_address || '127.0.0.1'}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function fetchActiveAlerts() {
+            try {
+                const res = await fetch(`${API_BASE}/alerts/active`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const banner = document.getElementById('operationalAlertBanner');
+                const bannerText = document.getElementById('alertBannerText');
+
+                if (data.alerts && data.alerts.length > 0) {
+                    const criticalCount = data.alerts.filter(a => a.overall_calculated_risk === 'CRITICAL').length;
+                    bannerText.innerText = `${data.alerts.length} Active Operational Alert(s) Detected (${criticalCount} Critical Suicide/Medical Watch).`;
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Failed to fetch operational alerts:', err);
+            }
+        }
+
+        function dismissAlertBanner() {
+            const banner = document.getElementById('operationalAlertBanner');
+            if (banner) {
+                banner.classList.add('hidden');
+            }
+        }
+
+        async function openLegalModal(pacirId, surname, givenNames) {
+            document.getElementById('legalPacirId').value = pacirId;
+            document.getElementById('legalModalPoiName').innerText = `POI: ${givenNames} ${surname ? surname.toUpperCase() : ''}`;
+            
+            const historyContainer = document.getElementById('legalHistoryContainer');
+            historyContainer.innerHTML = `<p class="text-slate-400 italic">Loading court filings...</p>`;
+            
+            try {
+                const res = await fetch(`${API_BASE}/cases/${pacirId}/legal`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                
+                if (data.legal_records && data.legal_records.length > 0) {
+                    historyContainer.innerHTML = data.legal_records.map(rec => `
+                        <div class="p-2 bg-white rounded border border-slate-200 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-800">
+                                <span>${rec.court_name} (${rec.case_file_ref})</span>
+                                <span class="${rec.injunction_granted ? 'text-red-600 font-black' : 'text-amber-600'}">${rec.case_status}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-600">
+                                Proceeding: <strong>${rec.proceeding_type}</strong> | Legal Counsel: ${rec.legal_representation}
+                            </div>
+                            ${rec.notes ? `<div class="text-[10px] text-slate-500 italic bg-slate-50 p-1 rounded">"${rec.notes}"</div>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    historyContainer.innerHTML = `<p class="text-slate-400 italic">No court filings recorded for this POI.</p>`;
+                }
+            } catch (err) {
+                console.error('Error fetching legal history:', err);
+                historyContainer.innerHTML = `<p class="text-red-500 italic">Error loading legal history.</p>`;
+            }
+
+            document.getElementById('legalModal').classList.remove('hidden');
+        }
+
+        function closeLegalModal() {
+            document.getElementById('legalModal').classList.add('hidden');
+        }
+
+        async function submitLegalRecord(event) {
+            event.preventDefault();
+
+            const pacirId = document.getElementById('legalPacirId').value;
+            if (!pacirId) {
+                alert('Error: No valid POI record selected.');
+                return;
+            }
+
+            const payload = {
+                pacir_id: pacirId,
+                court_name: document.getElementById('legalCourtName').value,
+                proceeding_type: document.getElementById('legalProceedingType').value,
+                case_file_ref: document.getElementById('legalCaseRef').value,
+                legal_representation: document.getElementById('legalRepresentation').value,
+                next_hearing_date: document.getElementById('legalHearingDate').value || null,
+                case_status: document.getElementById('legalCaseStatus').value,
+                injunction_granted: document.getElementById('legalInjunctionGranted').checked,
+                notes: document.getElementById('legalNotes').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/legal`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+                
+                if (result.status === 'SUCCESS') {
+                    alert('Legal Record & Court Case Saved Successfully!');
+                    closeLegalModal();
+                    loadCasesRegistry();
+                } else {
+                    alert(`Server Error: ${result.message}`);
+                }
+            } catch (err) {
+                console.error('Network or fetch error:', err);
+                alert('Failed to connect to backend server.');
+            }
+        }
+
+        async function triggerManualBackup() {
+            if (!confirm('Run manual on-demand database backup?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/sysadmin/backup`, { method: 'POST', headers: getAuthHeaders() });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') alert(`Backup Created: ${result.filename}`);
+            } catch (err) {}
+        }
+
+        function openResetPasswordModal(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUsernameDisplay').value = username;
+            document.getElementById('resetNewPassword').value = '';
+            document.getElementById('resetPasswordModal').classList.remove('hidden');
+        }
+
+        function closeResetPasswordModal() { document.getElementById('resetPasswordModal').classList.add('hidden'); }
+
+        async function submitResetPassword(event) {
+            event.preventDefault();
+            try {
+                const res = await fetch(`${API_BASE}/users/${document.getElementById('resetUserId').value}/password`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ new_password: document.getElementById('resetNewPassword').value })
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert(result.message);
+                    closeResetPasswordModal();
+                }
+            } catch (err) {}
+        }
+
         function refreshAllData() {
             fetchQueue();
             loadAnalytics();
+            loadCasesRegistry();
+            loadCompoundOccupancy();
+            loadDeportationsPipeline();
+            loadSystemUsers();
+            loadAuditLogs();
+            fetchActiveAlerts();
         }
 
-        refreshAllData();
+        window.addEventListener('DOMContentLoaded', () => {
+            if (authToken) {
+                const user = JSON.parse(localStorage.getItem('bic_active_user'));
+                if (user) {
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('appWorkspace').classList.remove('hidden');
+                    document.getElementById('headerUserName').innerText = user.full_name;
+                    document.getElementById('sidebarRoleLabel').innerText = user.role.replace('_', ' ');
+
+                    if (user.role === 'SYSTEM_ADMIN') {
+                        document.getElementById('adminNavSection').style.display = 'block';
+                    } else {
+                        document.getElementById('adminNavSection').style.display = 'none';
+                    }
+
+                    switchTab('overview');
+                    refreshAllData();
+                }
+            }
+        });
     </script>
 </body>
 </html>
