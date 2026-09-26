@@ -779,6 +779,140 @@ app.post('/v1/property', authenticateToken, async (req, res) => {
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
+
+// ============================================================
+// PHASE 3 API ENDPOINTS: VISITORS & INCIDENT SECURITY LOGS
+// ============================================================
+
+// 1. GET ALL VISITOR LOGS (OR FILTER BY POI)
+app.get('/v1/visitors', authenticateToken, async (req, res) => {
+    try {
+        const { pacir_id } = req.query;
+        let query = `
+            SELECT v.*, p.given_names, p.surname, p.pacir_ref_number 
+            FROM poi_visitor_logs v
+            LEFT JOIN pacir_intake p ON v.pacir_id = p.pacir_id
+            ORDER BY v.scheduled_start_time DESC
+        `;
+        let params = [];
+
+        if (pacir_id) {
+            query = `
+                SELECT v.*, p.given_names, p.surname, p.pacir_ref_number 
+                FROM poi_visitor_logs v
+                LEFT JOIN pacir_intake p ON v.pacir_id = p.pacir_id
+                WHERE v.pacir_id = $1
+                ORDER BY v.scheduled_start_time DESC
+            `;
+            params = [pacir_id];
+        }
+
+        const result = await pool.query(query, params);
+        res.json({ status: 'SUCCESS', visitors: result.rows });
+    } catch (err) {
+        console.error('Error fetching visitor logs:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 2. SCHEDULE OR LOG A VISITOR / LEGAL COUNSEL ACCESS
+app.post('/v1/visitors', authenticateToken, async (req, res) => {
+    try {
+        const {
+            pacir_id, visitor_type, visitor_name, organization_or_relation,
+            id_type_number, scheduled_start_time, consultation_room, notes
+        } = req.body;
+
+        const officer_id = req.user.user_id;
+
+        const result = await pool.query(
+            `INSERT INTO poi_visitor_logs (
+                pacir_id, visitor_type, visitor_name, organization_or_relation,
+                id_type_number, scheduled_start_time, consultation_room,
+                logged_by_officer_id, notes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING visitor_id`,
+            [
+                pacir_id, visitor_type, visitor_name, organization_or_relation,
+                id_type_number, scheduled_start_time || new Date(), consultation_room || 'ROOM-1',
+                officer_id, notes
+            ]
+        );
+
+        // Audit log entry
+        await pool.query(
+            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
+            [officer_id, 'VISITOR_ACCESS_LOGGED', `Visitor: ${visitor_name} (${visitor_type})`]
+        );
+
+        res.json({ status: 'SUCCESS', message: 'Visitor access scheduled', visitor_id: result.rows[0].visitor_id });
+    } catch (err) {
+        console.error('Error logging visitor:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 3. GET ALL INCIDENT LOGS
+app.get('/v1/incidents', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT i.*, c.compound_name, p.given_names, p.surname 
+             FROM poi_incident_logs i
+             LEFT JOIN compound_allocations c ON i.compound_id = c.compound_id
+             LEFT JOIN pacir_intake p ON i.primary_poi_id = p.pacir_id
+             ORDER BY i.incident_timestamp DESC`
+        );
+        res.json({ status: 'SUCCESS', incidents: result.rows });
+    } catch (err) {
+        console.error('Error fetching incident logs:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 4. REPORT A NEW INCIDENT / DISCIPLINARY EVENT
+app.post('/v1/incidents', authenticateToken, async (req, res) => {
+    try {
+        const {
+            compound_id, primary_poi_id, severity_level, incident_category,
+            incident_location, summary_description, action_taken,
+            lockdown_triggered, duty_manager_escalated
+        } = req.body;
+
+        const officer_id = req.user.user_id;
+        const incident_ref_no = `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        const result = await pool.query(
+            `INSERT INTO poi_incident_logs (
+                incident_ref_no, compound_id, primary_poi_id, reporting_officer_id,
+                severity_level, incident_category, incident_location,
+                summary_description, action_taken, lockdown_triggered, duty_manager_escalated
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING incident_id, incident_ref_no`,
+            [
+                incident_ref_no, compound_id || null, primary_poi_id || null, officer_id,
+                severity_level, incident_category, incident_location,
+                summary_description, action_taken,
+                lockdown_triggered || false, duty_manager_escalated || false
+            ]
+        );
+
+        // Audit log entry
+        await pool.query(
+            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
+            [officer_id, 'SECURITY_INCIDENT_REPORTED', `Ref: ${incident_ref_no} (${severity_level})`]
+        );
+
+        res.json({
+            status: 'SUCCESS',
+            message: 'Incident Report Created',
+            incident: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Error logging incident:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
 // START SERVER
 app.listen(port, () => {
     console.log(`=================================================`);
