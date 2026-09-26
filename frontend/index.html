@@ -77,11 +77,11 @@
         <aside class="w-64 bg-slate-200/80 text-slate-700 border-r border-slate-300 flex flex-col justify-between flex-shrink-0 min-h-screen z-30">
             <div>
                 <div class="p-4 border-b border-slate-300/80 flex items-center justify-center bg-slate-300/30">
-                    <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="w-full max-h-12 object-contain" onerror="this.style.display='none'; document.getElementById('sidebarFallbackHeader').classList.remove('hidden');">
-                    <div id="sidebarFallbackHeader" class="hidden flex items-center space-x-2 text-brand-navy">
-                        <i class="fa-solid fa-shield-halved text-brand-red text-xl"></i>
-                        <span class="font-extrabold text-xs tracking-wider">ICSA PNG BIC</span>
-                    </div>
+                    <img id="sidebarLogoImg"
+                         src="assets/ICSA LOGO.png" 
+                         alt="PNGICSA Logo" 
+                         class="h-12 w-auto object-contain mx-auto" 
+                         onerror="this.onerror=null; this.src='assets/ICSA LOGO1.png';">
                 </div>
 
                 <div class="px-4 py-2.5 bg-slate-300/60 border-b border-slate-300 flex items-center space-x-2">
@@ -132,6 +132,30 @@
                                     <span>Deportation & Logistics</span>
                                 </button>
                             </li>
+                            <li>
+                                <button onclick="switchTab('medical')" id="nav-medical" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-heart-pulse w-4 text-brand-red"></i>
+                                    <span>Medical & Health Registry</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="switchTab('property')" id="nav-property" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-boxes-packing w-4"></i>
+                                    <span>Property Custody & Bags</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="switchTab('visitors')" id="nav-visitors" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-id-card-clip w-4 text-amber-600"></i>
+                                    <span>Visitors & Legal Counsel</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="switchTab('incidents')" id="nav-incidents" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-slate-300/60 font-semibold text-slate-700 transition">
+                                    <i class="fa-solid fa-triangle-exclamation w-4 text-red-600"></i>
+                                    <span>Security Incident Log</span>
+                                </button>
+                            </li>
                         </ul>
                     </div>
 
@@ -157,10 +181,10 @@
             </div>
         </aside>
 
-        <!-- RIGHT CONTENT WORKSPACE WITH ENHANCED WATERMARK -->
+        <!-- RIGHT CONTENT WORKSPACE WITH GLOBAL BACKGROUND WATERMARK -->
         <div class="flex-1 flex flex-col min-w-0 min-h-screen bg-brand-bg relative overflow-x-hidden">
             
-            <!-- GLOBAL BACKGROUND WATERMARK LAYER (18% OPACITY FOR VISIBILITY) -->
+            <!-- GLOBAL BACKGROUND WATERMARK LAYER -->
             <div class="fixed inset-0 left-64 top-16 pointer-events-none z-0 flex items-center justify-center opacity-[0.18]">
                 <img src="assets/ICSA LOGO1.png" alt="ICSA Watermark" class="w-[620px] max-w-[70vw] h-auto object-contain" onerror="this.style.display='none'">
             </div>
@@ -232,15 +256,18 @@
                             <i class="fa-solid fa-arrows-rotate"></i>
                             <span>Sync Live Feeds</span>
                         </button>
+                        <button onclick="downloadExecutiveBriefing()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>Daily Briefing (PDF)</span>
+                        </button>
                     </div>
                 </div>
 
                 <!-- 1. OVERVIEW TAB -->
                 <div id="view-overview" class="space-y-6">
-                    <!-- HERO WELCOME BANNER (TRANSLUCENT BG SO EMBLEM IS CLEARLY VISIBLE) -->
                     <div class="bg-white/60 backdrop-blur-xs rounded-2xl border border-slate-200/80 p-12 shadow-sm text-center space-y-4">
                         <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-                            Welcome to PNGICSA Bomana Immigration Centre Case Management & PACIR System
+                            Welcome to PNGICSA Bomana Immigration Centre - Case Management & PACIR System
                         </h1>
                         <p class="text-xl md:text-2xl font-bold text-slate-700 italic">
                             “Paperless, secure, and fast processing.”
@@ -253,31 +280,37 @@
                         </div>
                     </div>
 
-                    <!-- METRICS STRIP -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending Admissions</p>
-                            <h3 id="cardQueueCount" class="text-3xl font-black text-slate-900 mt-1">0</h3>
-                            <p class="text-[11px] font-medium text-slate-500 mt-1">Requires DM review</p>
+                    <!-- OVERVIEW STATS CARDS BLOCK -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <!-- 1. PENDING ADMISSIONS -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pending Admissions</div>
+                            <div id="stat-pending-admissions" class="text-2xl font-bold text-brand-dark">0</div>
+                            <div class="text-xs text-slate-500 mt-1">Requires DM review</div>
                         </div>
-                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">En Route / Approved</p>
-                            <h3 class="text-3xl font-black text-emerald-600 mt-1">12</h3>
-                            <p class="text-[11px] font-medium text-slate-500 mt-1">Transfer in progress</p>
+
+                        <!-- 2. ACTIVE / APPROVED -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">En Route / Approved</div>
+                            <div id="stat-active-cases" class="text-2xl font-bold text-emerald-600">0</div>
+                            <div class="text-xs text-slate-500 mt-1">Transfer in progress</div>
                         </div>
-                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Deferred Action</p>
-                            <h3 class="text-3xl font-black text-amber-600 mt-1">2</h3>
-                            <p class="text-[11px] font-medium text-slate-500 mt-1">Awaiting medical clearance</p>
+
+                        <!-- 3. DEFERRED / MEDICAL FLAGS -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Medical &amp; Risk Flags</div>
+                            <div id="stat-risk-flags" class="text-2xl font-bold text-amber-600">0</div>
+                            <div class="text-xs text-slate-500 mt-1">Critical watch active</div>
                         </div>
-                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facility Occupancy</p>
-                            <h3 class="text-3xl font-black text-slate-900 mt-1">84 <span class="text-sm font-bold text-slate-400">/ 122</span></h3>
-                            <p class="text-[11px] font-medium text-slate-500 mt-1">68.8% Total Capacity</p>
+
+                        <!-- 4. FACILITY OCCUPANCY (DYNAMIC DB SYNC) -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Facility Occupancy</div>
+                            <div id="stat-occupancy" class="text-2xl font-bold text-brand-dark">0 / 0</div>
+                            <div id="stat-occupancy-subtext" class="text-xs text-slate-500 mt-1">0% Total Capacity</div>
                         </div>
                     </div>
 
-                    <!-- ANALYTICS CHARTS GRID -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
@@ -465,7 +498,6 @@
                         </div>
                     </div>
 
-                    <!-- 3-COLUMN DIAGNOSTICS GRID -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white/80 backdrop-blur-xs p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
@@ -532,6 +564,129 @@
                                 </thead>
                                 <tbody id="auditLogsTableBody" class="divide-y divide-slate-200 text-xs font-mono text-slate-700">
                                     <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading audit trail...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. MEDICAL REGISTRY TAB -->
+                <div id="view-medical" class="hidden space-y-6">
+                    <div class="bg-white/90 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 uppercase">POI Medical Intake & Travel Clearance Registry</h3>
+                                <p class="text-xs text-slate-500">Manage health screenings, suicide watch protocols, and Fit-to-Fly certifications.</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Case File #</th>
+                                        <th class="py-3 px-4">POI Name</th>
+                                        <th class="py-3 px-4">Medical Screening</th>
+                                        <th class="py-3 px-4">Suicide / Medical Watch</th>
+                                        <th class="py-3 px-4">Fit-for-Travel</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="medicalTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading medical records...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. PROPERTY CUSTODY TAB -->
+                <div id="view-property" class="hidden space-y-6">
+                    <div class="bg-white/90 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 uppercase">POI Personal Belongings & Property Custody</h3>
+                                <p class="text-xs text-slate-500">Log surrendered valuables, luggage locker assignments, and generate QR bag tags.</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Case File #</th>
+                                        <th class="py-3 px-4">POI Name</th>
+                                        <th class="py-3 px-4">Bag Tag QR</th>
+                                        <th class="py-3 px-4">Category</th>
+                                        <th class="py-3 px-4">Locker #</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="propertyTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading property registry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9. VISITORS & LEGAL COUNSEL TAB -->
+                <div id="view-visitors" class="hidden space-y-6">
+                    <div class="bg-white/90 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 uppercase">Visitor & Legal Counsel Access Control</h3>
+                                <p class="text-xs text-slate-500">Log scheduled visits by legal representatives, UNHCR delegates, and family members.</p>
+                            </div>
+                            <button onclick="openVisitorModal()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>Schedule Access Booking</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">POI Name</th>
+                                        <th class="py-3 px-4">Visitor Name</th>
+                                        <th class="py-3 px-4">Category</th>
+                                        <th class="py-3 px-4">ID Ref #</th>
+                                        <th class="py-3 px-4">Room</th>
+                                        <th class="py-3 px-4">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="visitorTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading visitor registry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10. SECURITY INCIDENT LOG TAB -->
+                <div id="view-incidents" class="hidden space-y-6">
+                    <div class="bg-white/90 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 uppercase">Compound Security Incident & Disciplinary Registry</h3>
+                                <p class="text-xs text-slate-500">Track contraband discoveries, physical altercations, and facility lockdowns.</p>
+                            </div>
+                            <button onclick="openIncidentModal()" class="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                                <span>Report Security Incident</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
+                                        <th class="py-3 px-4">Ref #</th>
+                                        <th class="py-3 px-4">Category</th>
+                                        <th class="py-3 px-4">Location</th>
+                                        <th class="py-3 px-4">Severity</th>
+                                        <th class="py-3 px-4">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incidentTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
+                                    <tr><td colspan="5" class="p-4 text-center text-slate-400">Loading security log...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -813,12 +968,249 @@
         </div>
     </div>
 
+    <!-- MEDICAL ENTRY MODAL -->
+    <div id="medicalModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-heart-pulse text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">POI MEDICAL SCREENING RECORD</h3>
+                </div>
+                <button onclick="closeMedicalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitMedicalRecord(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="medPacirId">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Blood Pressure</label>
+                        <input type="text" id="medBp" placeholder="120/80" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Pulse (bpm)</label>
+                        <input type="text" id="medPulse" placeholder="72" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Temp (°C)</label>
+                        <input type="number" step="0.1" id="medTemp" placeholder="36.6" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Pre-existing Conditions</label>
+                        <input type="text" id="medConditions" placeholder="Diabetes, Asthma, etc." class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Known Allergies</label>
+                        <input type="text" id="medAllergies" placeholder="Penicillin, etc." class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+                <div class="bg-red-50 p-3 rounded-lg border border-red-200 space-y-2">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="medContagious" class="rounded text-brand-red h-4 w-4">
+                        <span class="font-bold text-red-900">Contagious / Infectious Disease Risk</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="medSuicide" class="rounded text-brand-red h-4 w-4">
+                        <span class="font-bold text-red-900">Mandatory Suicide Watch Protocol</span>
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 gap-3 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="medFitDetention" checked class="rounded text-emerald-600 h-4 w-4">
+                        <span class="font-bold text-emerald-900">Fit for Detention</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="medFitTravel" class="rounded text-emerald-600 h-4 w-4">
+                        <span class="font-bold text-emerald-900">Fit for Travel Clearance</span>
+                    </label>
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeMedicalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg shadow">Save Medical Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PROPERTY LOG MODAL -->
+    <div id="propertyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-boxes-packing text-amber-400"></i>
+                    <h3 class="font-bold text-sm tracking-wide">LOG POI PROPERTY / VALUABLES</h3>
+                </div>
+                <button onclick="closePropertyModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitPropertyRecord(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="propPacirId">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Item Category *</label>
+                    <select id="propCategory" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="CASH">CASH / CURRENCY</option>
+                        <option value="ELECTRONICS">ELECTRONICS (MOBILE, LAPTOP)</option>
+                        <option value="DOCUMENTS">PERSONAL DOCUMENTS / PASSPORT</option>
+                        <option value="LUGGAGE">LUGGAGE / CLOTHING BAG</option>
+                        <option value="JEWELRY">JEWELRY / VALUABLES</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Item Description *</label>
+                    <input type="text" id="propDesc" required placeholder="e.g. iPhone 14 Pro, Black Leather Wallet" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Serial Number</label>
+                        <input type="text" id="propSerial" placeholder="Optional" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Storage Locker # *</label>
+                        <input type="text" id="propLocker" required placeholder="LOCKER-A04" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closePropertyModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg shadow">Generate Tag & Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VISITOR BOOKING MODAL -->
+    <div id="visitorModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-id-card-clip text-amber-400"></i>
+                    <h3 class="font-bold text-sm tracking-wide">SCHEDULE VISITOR ACCESS</h3>
+                </div>
+                <button onclick="closeVisitorModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitVisitorRecord(event)" class="p-6 space-y-4 text-xs font-medium">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target POI Case *</label>
+                    <select id="visPacirId" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="">-- SELECT POI CASE FILE --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Visitor Category *</label>
+                    <select id="visType" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="LEGAL_COUNSEL">LEGAL COUNSEL / LAWYER</option>
+                        <option value="DIPLOMATIC_UNHCR">DIPLOMATIC / UNHCR DELEGATE</option>
+                        <option value="FAMILY">FAMILY / NEXT OF KIN</option>
+                        <option value="OFFICIAL">GOVERNMENT / POLICE OFFICIAL</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Full Visitor Name *</label>
+                    <input type="text" id="visName" required placeholder="e.g. Attorney Sarah Keke" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Organization / Firm</label>
+                        <input type="text" id="visOrg" placeholder="e.g. Pacific Legal" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">ID Ref Number *</label>
+                        <input type="text" id="visIdNum" required placeholder="e.g. PASSPORT / BAR ID" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Scheduled Date/Time *</label>
+                        <input type="datetime-local" id="visTime" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Consultation Room *</label>
+                        <input type="text" id="visRoom" required value="ROOM-1" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeVisitorModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg shadow">Confirm Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SECURITY INCIDENT REPORT MODAL -->
+    <div id="incidentModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-lg"></i>
+                    <h3 class="font-bold text-sm tracking-wide">REPORT SECURITY INCIDENT</h3>
+                </div>
+                <button onclick="closeIncidentModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitIncidentRecord(event)" class="p-6 space-y-4 text-xs font-medium">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Severity Level *</label>
+                        <select id="incSeverity" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold text-red-700">
+                            <option value="LOW">LOW (MINOR BREACH)</option>
+                            <option value="MEDIUM">MEDIUM (ALTERCATION / DAMAGE)</option>
+                            <option value="HIGH">HIGH (CONTRABAND / ASSAULT)</option>
+                            <option value="CRITICAL_LOCKDOWN">CRITICAL (LOCKDOWN TRIGGERED)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Category *</label>
+                        <select id="incCategory" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="ALTERCATION">PHYSICAL ALTERCATION</option>
+                            <option value="CONTRABAND">CONTRABAND DISCOVERY</option>
+                            <option value="PROPERTY_DAMAGE">PROPERTY DAMAGE</option>
+                            <option value="SECURITY_BREACH">PERIMETER BREACH</option>
+                            <option value="MEDICAL_EMERGENCY">MEDICAL EMERGENCY</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Compound *</label>
+                        <select id="incCompound" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="">-- SELECT COMPOUND --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Specific Location *</label>
+                        <input type="text" id="incLocation" required placeholder="e.g. Mess Hall / Cell Block A" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Incident Summary & Details *</label>
+                    <textarea id="incSummary" required rows="2" class="w-full px-3 py-2 bg-slate-50 border rounded-lg" placeholder="Describe the security event..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Immediate Action Taken</label>
+                    <input type="text" id="incAction" placeholder="e.g. POIs segregated, medical dispatched" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+                <div class="bg-red-50 p-3 rounded-lg border border-red-200 space-y-2">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="incLockdown" class="rounded text-red-600 h-4 w-4">
+                        <span class="font-bold text-red-900">Trigger Immediate Compound Lockdown</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="incEscalate" checked class="rounded text-red-600 h-4 w-4">
+                        <span class="font-bold text-red-900">Escalate Alert to Duty Manager</span>
+                    </label>
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeIncidentModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-red-700 text-white font-bold rounded-lg shadow">Log & Dispatch Alert</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/v1';
         let authToken = localStorage.getItem('bic_auth_token') || null;
         let riskChartInstance = null;
         let capacityChartInstance = null;
         let cachedCompoundsList = [];
+        let cachedCasesList = [];
 
         function getAuthHeaders() {
             return {
@@ -878,7 +1270,7 @@
         }
 
         function switchTab(tabKey) {
-            const views = ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'sysadmin'];
+            const views = ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'sysadmin', 'medical', 'property', 'visitors', 'incidents'];
             views.forEach(v => {
                 const el = document.getElementById(`view-${v}`);
                 if (el) el.classList.add('hidden');
@@ -905,10 +1297,11 @@
             else if (tabKey === 'compounds') loadCompoundOccupancy();
             else if (tabKey === 'pois') loadCasesRegistry();
             else if (tabKey === 'deportations') loadDeportationsPipeline();
-            else if (tabKey === 'sysadmin') {
-                loadSystemUsers();
-                loadAuditLogs();
-            }
+            else if (tabKey === 'sysadmin') { loadSystemUsers(); loadAuditLogs(); }
+            else if (tabKey === 'medical') loadMedicalRegistry();
+            else if (tabKey === 'property') loadPropertyRegistry();
+            else if (tabKey === 'visitors') loadVisitorRegistry();
+            else if (tabKey === 'incidents') loadIncidentRegistry();
         }
 
         function openIntakeModal() {
@@ -1051,6 +1444,7 @@
                 const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
                 const result = await res.json();
                 if (result.cases) {
+                    cachedCasesList = result.cases;
                     document.getElementById('casesTableBody').innerHTML = result.cases.map(c => `
                         <tr class="hover:bg-slate-50 transition">
                             <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || '<span class="text-amber-600 italic">PENDING</span>'}</td>
@@ -1269,6 +1663,85 @@
             } catch (err) {}
         }
 
+        async function loadMedicalRegistry() {
+            try {
+                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.cases) {
+                    document.getElementById('medicalTableBody').innerHTML = data.cases.map(c => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
+                            <td class="py-3 px-4 font-bold">${c.surname.toUpperCase()}, ${c.given_names}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">COMPLETED</span></td>
+                            <td class="py-3 px-4 font-bold ${c.suicide_risk_identified ? 'text-red-600' : 'text-slate-500'}">${c.suicide_risk_identified ? 'CRITICAL WATCH' : 'NORMAL'}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">APPROVED</span></td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="openMedicalModal('${c.pacir_id}')" class="bg-brand-navy text-white px-2.5 py-1 rounded font-bold text-[11px]">Update Health Log</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function loadPropertyRegistry() {
+            try {
+                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.cases) {
+                    document.getElementById('propertyTableBody').innerHTML = data.cases.map(c => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
+                            <td class="py-3 px-4 font-bold">${c.surname.toUpperCase()}, ${c.given_names}</td>
+                            <td class="py-3 px-4 font-mono text-brand-red font-bold">BAG-${c.pacir_id.substring(0,6)}</td>
+                            <td class="py-3 px-4 font-bold">ELECTRONICS / CASH</td>
+                            <td class="py-3 px-4 font-bold">LOCKER-A01</td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="openPropertyModal('${c.pacir_id}')" class="bg-amber-600 text-white px-2.5 py-1 rounded font-bold text-[11px]">Log Item / Tag</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function loadVisitorRegistry() {
+            try {
+                const res = await fetch(`${API_BASE}/visitors`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.visitors) {
+                    document.getElementById('visitorTableBody').innerHTML = data.visitors.map(v => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold text-slate-800">${v.given_names || 'POI'} ${v.surname || ''}</td>
+                            <td class="py-3 px-4 font-bold text-brand-navy">${v.visitor_name}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">${v.visitor_type}</span></td>
+                            <td class="py-3 px-4 font-mono uppercase">${v.id_type_number}</td>
+                            <td class="py-3 px-4 font-bold">${v.consultation_room}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">${v.visit_status}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function loadIncidentRegistry() {
+            try {
+                const res = await fetch(`${API_BASE}/incidents`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.incidents) {
+                    document.getElementById('incidentTableBody').innerHTML = data.incidents.map(i => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold text-brand-red font-mono">${i.incident_ref_no}</td>
+                            <td class="py-3 px-4 font-bold">${i.incident_category}</td>
+                            <td class="py-3 px-4">${i.incident_location}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-red-100 text-red-800 font-bold">${i.severity_level}</span></td>
+                            <td class="py-3 px-4 font-bold text-amber-600">${i.resolution_status}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
         async function fetchActiveAlerts() {
             try {
                 const res = await fetch(`${API_BASE}/alerts/active`, { headers: getAuthHeaders() });
@@ -1291,13 +1764,8 @@
             if (banner) banner.classList.add('hidden');
         }
 
-        function openUserModal() {
-            document.getElementById('userModal').classList.remove('hidden');
-        }
-
-        function closeUserModal() {
-            document.getElementById('userModal').classList.add('hidden');
-        }
+        function openUserModal() { document.getElementById('userModal').classList.remove('hidden'); }
+        function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
 
         async function submitNewUser(event) {
             event.preventDefault();
@@ -1360,9 +1828,7 @@
             document.getElementById('legalModal').classList.remove('hidden');
         }
 
-        function closeLegalModal() {
-            document.getElementById('legalModal').classList.add('hidden');
-        }
+        function closeLegalModal() { document.getElementById('legalModal').classList.add('hidden'); }
 
         async function submitLegalRecord(event) {
             event.preventDefault();
@@ -1391,6 +1857,114 @@
                     loadCasesRegistry();
                 }
             } catch (err) {}
+        }
+
+        function openMedicalModal(pacirId) {
+            document.getElementById('medPacirId').value = pacirId;
+            document.getElementById('medicalModal').classList.remove('hidden');
+        }
+        function closeMedicalModal() { document.getElementById('medicalModal').classList.add('hidden'); }
+
+        async function submitMedicalRecord(event) {
+            event.preventDefault();
+            const payload = {
+                pacir_id: document.getElementById('medPacirId').value,
+                blood_pressure: document.getElementById('medBp').value,
+                pulse_rate: document.getElementById('medPulse').value,
+                temperature_c: document.getElementById('medTemp').value,
+                pre_existing_conditions: document.getElementById('medConditions').value,
+                allergies: document.getElementById('medAllergies').value,
+                contagious_disease_risk: document.getElementById('medContagious').checked,
+                suicide_watch_active: document.getElementById('medSuicide').checked,
+                fit_for_detention: document.getElementById('medFitDetention').checked,
+                fit_for_travel: document.getElementById('medFitTravel').checked
+            };
+            const res = await fetch(`${API_BASE}/medical`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.status === 'SUCCESS') { alert('Medical Record Saved!'); closeMedicalModal(); loadMedicalRegistry(); }
+        }
+
+        function openPropertyModal(pacirId) {
+            document.getElementById('propPacirId').value = pacirId;
+            document.getElementById('propertyModal').classList.remove('hidden');
+        }
+        function closePropertyModal() { document.getElementById('propertyModal').classList.add('hidden'); }
+
+        async function submitPropertyRecord(event) {
+            event.preventDefault();
+            const payload = {
+                pacir_id: document.getElementById('propPacirId').value,
+                item_category: document.getElementById('propCategory').value,
+                item_description: document.getElementById('propDesc').value,
+                serial_number: document.getElementById('propSerial').value,
+                storage_locker_number: document.getElementById('propLocker').value
+            };
+            const res = await fetch(`${API_BASE}/property`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.status === 'SUCCESS') { alert(`Property Item Saved!\nGenerated Tag: ${result.item.bag_tag_qr_code}`); closePropertyModal(); loadPropertyRegistry(); }
+        }
+
+        async function openVisitorModal() {
+            const select = document.getElementById('visPacirId');
+            select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
+            if (cachedCasesList.length === 0) {
+                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                cachedCasesList = data.cases || [];
+            }
+            cachedCasesList.forEach(c => {
+                select.innerHTML += `<option value="${c.pacir_id}">${c.surname.toUpperCase()}, ${c.given_names} (${c.bic_case_file_number || 'PENDING'})</option>`;
+            });
+            document.getElementById('visitorModal').classList.remove('hidden');
+        }
+        function closeVisitorModal() { document.getElementById('visitorModal').classList.add('hidden'); }
+
+        async function submitVisitorRecord(event) {
+            event.preventDefault();
+            const payload = {
+                pacir_id: document.getElementById('visPacirId').value,
+                visitor_type: document.getElementById('visType').value,
+                visitor_name: document.getElementById('visName').value,
+                organization_or_relation: document.getElementById('visOrg').value,
+                id_type_number: document.getElementById('visIdNum').value,
+                scheduled_start_time: document.getElementById('visTime').value,
+                consultation_room: document.getElementById('visRoom').value
+            };
+            const res = await fetch(`${API_BASE}/visitors`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.status === 'SUCCESS') { alert('Visitor Access Scheduled!'); closeVisitorModal(); loadVisitorRegistry(); }
+        }
+
+        async function openIncidentModal() {
+            const select = document.getElementById('incCompound');
+            select.innerHTML = '<option value="">-- SELECT COMPOUND --</option>';
+            if (cachedCompoundsList.length === 0) {
+                const res = await fetch(`${API_BASE}/compounds/occupancy`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                cachedCompoundsList = data.compounds || [];
+            }
+            cachedCompoundsList.forEach(c => {
+                select.innerHTML += `<option value="${c.compound_id}">${c.compound_name} (${c.compound_type || 'General'})</option>`;
+            });
+            document.getElementById('incidentModal').classList.remove('hidden');
+        }
+        function closeIncidentModal() { document.getElementById('incidentModal').classList.add('hidden'); }
+
+        async function submitIncidentRecord(event) {
+            event.preventDefault();
+            const payload = {
+                compound_id: document.getElementById('incCompound').value,
+                severity_level: document.getElementById('incSeverity').value,
+                incident_category: document.getElementById('incCategory').value,
+                incident_location: document.getElementById('incLocation').value,
+                summary_description: document.getElementById('incSummary').value,
+                action_taken: document.getElementById('incAction').value,
+                lockdown_triggered: document.getElementById('incLockdown').checked,
+                duty_manager_escalated: document.getElementById('incEscalate').checked
+            };
+            const res = await fetch(`${API_BASE}/incidents`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.status === 'SUCCESS') { alert(`Incident Reported!\nRef: ${result.incident.incident_ref_no}`); closeIncidentModal(); loadIncidentRegistry(); }
         }
 
         async function triggerManualBackup() {
@@ -1436,6 +2010,10 @@
             loadSystemUsers();
             loadAuditLogs();
             fetchActiveAlerts();
+            loadMedicalRegistry();
+            loadPropertyRegistry();
+            loadVisitorRegistry();
+            loadIncidentRegistry();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -1458,6 +2036,93 @@
                 }
             }
         });
+        async function downloadExecutiveBriefing() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/executive-briefing`, {
+            headers: getAuthHeaders()
+        });
+
+        if (!res.ok) {
+            const errData = await res.json();
+            alert(`Failed to generate briefing: ${errData.message}`);
+            return;
+        }
+
+        const blob = await res.blob();
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl, '_blank');
+    } catch (err) {
+        console.error('Error downloading briefing:', err);
+        alert('Network error while generating daily briefing.');
+    }
+}
+// ==========================================
+// DYNAMIC DASHBOARD OVERVIEW METRICS FETCH
+// ==========================================
+async function loadDashboardOverviewMetrics() {
+    try {
+        const res = await fetch(`${API_BASE}/analytics/summary`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!res.ok) return;
+        const result = await res.json();
+
+        if (result.status === 'SUCCESS' && result.data) {
+            const data = result.data;
+
+            // 1. Calculate live compound occupancy
+            let totalOccupied = 0;
+            let totalCapacity = 0;
+
+            if (data.compoundCapacity && Array.isArray(data.compoundCapacity)) {
+                data.compoundCapacity.forEach(compound => {
+                    totalOccupied += parseInt(compound.current_occupancy || 0);
+                    totalCapacity += parseInt(compound.total_capacity || 0);
+                });
+            }
+
+            // 2. Update Facility Occupancy Card
+            const occupancyElem = document.getElementById('stat-occupancy');
+            const occupancySubtext = document.getElementById('stat-occupancy-subtext');
+            if (occupancyElem) {
+                occupancyElem.innerText = `${totalOccupied} / ${totalCapacity}`;
+            }
+            if (occupancySubtext) {
+                const pct = totalCapacity > 0 ? ((totalOccupied / totalCapacity) * 100).toFixed(1) : '0.0';
+                occupancySubtext.innerText = `${pct}% Total Capacity`;
+            }
+
+            // 3. Update Pending, Active, and Risk Metrics from DB
+            const casesRes = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+            if (casesRes.ok) {
+                const casesData = await casesRes.json();
+                const casesList = casesData.cases || casesData.data || [];
+                
+                const pendingCount = casesList.filter(c => !c.allocated_compound).length;
+                const activeCount = casesList.filter(c => c.allocated_compound).length;
+                const riskCount = casesList.filter(c => c.overall_calculated_risk === 'CRITICAL' || c.overall_calculated_risk === 'HIGH').length;
+
+                if (document.getElementById('stat-pending-admissions')) {
+                    document.getElementById('stat-pending-admissions').innerText = pendingCount;
+                }
+                if (document.getElementById('stat-active-cases')) {
+                    document.getElementById('stat-active-cases').innerText = activeCount;
+                }
+                if (document.getElementById('stat-risk-flags')) {
+                    document.getElementById('stat-risk-flags').innerText = riskCount;
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error updating overview cards:', err);
+    }
+}
+
+// Call during initial page load and sync feed clicks
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboardOverviewMetrics();
+});
     </script>
 </body>
 </html>

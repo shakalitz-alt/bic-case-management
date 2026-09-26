@@ -9,6 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cron = require('node-cron');
+const { exec } = require('child_process');
 
 const app = express();
 const port = process.env.PORT || 3005;
@@ -648,7 +650,6 @@ app.post('/v1/deportations/register', authenticateToken, async (req, res) => {
 // PHASE 2 API ENDPOINTS: MEDICAL & PROPERTY CUSTODY
 // ============================================================
 
-// 1. GET MEDICAL RECORD FOR A POI
 app.get('/v1/medical/:pacir_id', authenticateToken, async (req, res) => {
     try {
         const { pacir_id } = req.params;
@@ -666,7 +667,6 @@ app.get('/v1/medical/:pacir_id', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. SAVE OR UPDATE POI MEDICAL SCREENING & TRAVEL FITNESS
 app.post('/v1/medical', authenticateToken, async (req, res) => {
     try {
         const {
@@ -710,10 +710,9 @@ app.post('/v1/medical', authenticateToken, async (req, res) => {
             );
         }
 
-        // Log Audit Trail
         await pool.query(
-            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
-            [officer_id, 'MEDICAL_RECORD_UPDATED', `PACIR: ${pacir_id}`]
+            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
+            [officer_id, req.user.username, req.user.role, 'MEDICAL_RECORD_UPDATED', `PACIR: ${pacir_id}`]
         );
 
         res.json({ status: 'SUCCESS', message: 'Medical Record Saved Successfully' });
@@ -723,7 +722,6 @@ app.post('/v1/medical', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. GET PROPERTY BAG ITEMS FOR A POI
 app.get('/v1/property/:pacir_id', authenticateToken, async (req, res) => {
     try {
         const { pacir_id } = req.params;
@@ -741,7 +739,6 @@ app.get('/v1/property/:pacir_id', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. ADD PROPERTY ITEM WITH QR BAG TAG
 app.post('/v1/property', authenticateToken, async (req, res) => {
     try {
         const {
@@ -763,10 +760,9 @@ app.post('/v1/property', authenticateToken, async (req, res) => {
             ]
         );
 
-        // Log Audit Trail
         await pool.query(
-            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
-            [receiving_officer_id, 'PROPERTY_ITEM_LOGGED', `Tag: ${bag_tag_qr_code}`]
+            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
+            [receiving_officer_id, req.user.username, req.user.role, 'PROPERTY_ITEM_LOGGED', `Tag: ${bag_tag_qr_code}`]
         );
 
         res.json({
@@ -784,14 +780,13 @@ app.post('/v1/property', authenticateToken, async (req, res) => {
 // PHASE 3 API ENDPOINTS: VISITORS & INCIDENT SECURITY LOGS
 // ============================================================
 
-// 1. GET ALL VISITOR LOGS (OR FILTER BY POI)
 app.get('/v1/visitors', authenticateToken, async (req, res) => {
     try {
         const { pacir_id } = req.query;
         let query = `
             SELECT v.*, p.given_names, p.surname, p.pacir_ref_number 
             FROM poi_visitor_logs v
-            LEFT JOIN pacir_intake p ON v.pacir_id = p.pacir_id
+            LEFT JOIN pacir_reports p ON v.pacir_id = p.pacir_id
             ORDER BY v.scheduled_start_time DESC
         `;
         let params = [];
@@ -800,7 +795,7 @@ app.get('/v1/visitors', authenticateToken, async (req, res) => {
             query = `
                 SELECT v.*, p.given_names, p.surname, p.pacir_ref_number 
                 FROM poi_visitor_logs v
-                LEFT JOIN pacir_intake p ON v.pacir_id = p.pacir_id
+                LEFT JOIN pacir_reports p ON v.pacir_id = p.pacir_id
                 WHERE v.pacir_id = $1
                 ORDER BY v.scheduled_start_time DESC
             `;
@@ -815,7 +810,6 @@ app.get('/v1/visitors', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. SCHEDULE OR LOG A VISITOR / LEGAL COUNSEL ACCESS
 app.post('/v1/visitors', authenticateToken, async (req, res) => {
     try {
         const {
@@ -839,10 +833,9 @@ app.post('/v1/visitors', authenticateToken, async (req, res) => {
             ]
         );
 
-        // Audit log entry
         await pool.query(
-            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
-            [officer_id, 'VISITOR_ACCESS_LOGGED', `Visitor: ${visitor_name} (${visitor_type})`]
+            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
+            [officer_id, req.user.username, req.user.role, 'VISITOR_ACCESS_LOGGED', `Visitor: ${visitor_name} (${visitor_type})`]
         );
 
         res.json({ status: 'SUCCESS', message: 'Visitor access scheduled', visitor_id: result.rows[0].visitor_id });
@@ -852,14 +845,13 @@ app.post('/v1/visitors', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. GET ALL INCIDENT LOGS
 app.get('/v1/incidents', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT i.*, c.compound_name, p.given_names, p.surname 
+            `SELECT i.*, c.name AS compound_name, p.given_names, p.surname 
              FROM poi_incident_logs i
-             LEFT JOIN compound_allocations c ON i.compound_id = c.compound_id
-             LEFT JOIN pacir_intake p ON i.primary_poi_id = p.pacir_id
+             LEFT JOIN compounds c ON i.compound_id = c.compound_id
+             LEFT JOIN pacir_reports p ON i.primary_poi_id = p.pacir_id
              ORDER BY i.incident_timestamp DESC`
         );
         res.json({ status: 'SUCCESS', incidents: result.rows });
@@ -869,7 +861,6 @@ app.get('/v1/incidents', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. REPORT A NEW INCIDENT / DISCIPLINARY EVENT
 app.post('/v1/incidents', authenticateToken, async (req, res) => {
     try {
         const {
@@ -896,10 +887,9 @@ app.post('/v1/incidents', authenticateToken, async (req, res) => {
             ]
         );
 
-        // Audit log entry
         await pool.query(
-            `INSERT INTO system_audit_logs (user_id, action_type, resource_affected) VALUES ($1, $2, $3)`,
-            [officer_id, 'SECURITY_INCIDENT_REPORTED', `Ref: ${incident_ref_no} (${severity_level})`]
+            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
+            [officer_id, req.user.username, req.user.role, 'SECURITY_INCIDENT_REPORTED', `Ref: ${incident_ref_no} (${severity_level})`]
         );
 
         res.json({
@@ -909,6 +899,134 @@ app.post('/v1/incidents', authenticateToken, async (req, res) => {
         });
     } catch (err) {
         console.error('Error logging incident:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// ============================================================
+// PHASE 4: AUTOMATED DAILY DATABASE BACKUP (MIDNIGHT CRON)
+// ============================================================
+cron.schedule('0 0 * * *', async () => {
+    console.log('⏰ Running automated midnight database backup...');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupDir = path.join(__dirname, 'backups');
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+    
+    const backupPath = path.join(backupDir, `bic_backup_${timestamp}.sql`);
+    const pgDumpCmd = `pg_dump -U ${process.env.DB_USER || 'postgres'} -d ${process.env.DB_NAME || 'bic_casemanagement'} -f "${backupPath}"`;
+
+    exec(pgDumpCmd, { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } }, (error) => {
+        if (error) {
+            console.error('❌ Automated Backup Failed:', error.message);
+        } else {
+            console.log(`✅ Automated Backup Saved: ${backupPath}`);
+        }
+    });
+});
+
+// ============================================================
+// PHASE 4: EXECUTIVE DAILY COMMANDER'S BRIEFING PDF API
+// ============================================================
+app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) => {
+    try {
+        // Safe metric queries with zero fallbacks
+        let totalCases = 0, occupiedBeds = 0, capacityBeds = 0, medicalFlags = 0, incidents24h = 0, activeDeportations = 0;
+
+        try {
+            const casesRes = await pool.query('SELECT COUNT(*) FROM pacir_reports');
+            totalCases = casesRes.rows[0].count;
+        } catch (e) { console.warn('Briefing: pacir_reports query warning', e.message); }
+
+        try {
+            const occupancyRes = await pool.query('SELECT SUM(current_occupancy) as occupied, SUM(total_capacity) as capacity FROM compounds');
+            occupiedBeds = occupancyRes.rows[0].occupied || 0;
+            capacityBeds = occupancyRes.rows[0].capacity || 0;
+        } catch (e) { console.warn('Briefing: compounds query warning', e.message); }
+
+        try {
+            const medicalRes = await pool.query("SELECT COUNT(*) FROM risk_assessments WHERE suicide_risk_identified = TRUE OR immediate_medical_required = TRUE");
+            medicalFlags = medicalRes.rows[0].count;
+        } catch (e) { console.warn('Briefing: risk_assessments query warning', e.message); }
+
+        try {
+            const incidentsRes = await pool.query("SELECT COUNT(*) FROM poi_incident_logs WHERE created_at >= NOW() - INTERVAL '24 hours'");
+            incidents24h = incidentsRes.rows[0].count;
+        } catch (e) { console.warn('Briefing: poi_incident_logs query warning', e.message); }
+
+        try {
+            const deportationsRes = await pool.query("SELECT COUNT(*) FROM poi_deportations WHERE logistics_status = 'EN_ROUTE' OR logistics_status = 'SCHEDULED'");
+            activeDeportations = deportationsRes.rows[0].count;
+        } catch (e) { console.warn('Briefing: poi_deportations query warning', e.message); }
+
+        const doc = new PDFDocument({ margin: 40 });
+        const filename = `Executive_Briefing_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        doc.pipe(res);
+
+        // Render ICSA Logo in top left header
+        let logoPath = path.join(__dirname, 'assets', 'ICSA LOGO.png');
+        if (!fs.existsSync(logoPath)) logoPath = path.join(__dirname, 'assets', 'ICSA LOGO');
+        if (!fs.existsSync(logoPath)) logoPath = path.join(__dirname, 'assets', 'logo.png');
+
+        try {
+            if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, 40, 25, { width: 65 });
+            }
+        } catch (imgErr) {
+            console.warn('Briefing Logo render warning:', imgErr.message);
+        }
+
+        // Header Title (Clean single-line font sizing and dynamic Y flow)
+        const headerX = 115;
+        const headerWidth = 440;
+
+        doc.fillColor('#0b192c').fontSize(11.5).font('Helvetica-Bold')
+           .text('PAPUA NEW GUINEA IMMIGRATION & CITIZENSHIP SERVICE AUTHORITY', headerX, 28, { width: headerWidth, align: 'center' });
+        
+        doc.fillColor('#b80d19').fontSize(10.5).font('Helvetica-Bold')
+           .text('BOMANA IMMIGRATION CENTRE — DAILY EXECUTIVE BRIEFING', headerX, 48, { width: headerWidth, align: 'center' });
+
+        doc.fillColor('#555555').fontSize(8).font('Helvetica')
+           .text(`Generated On: ${new Date().toLocaleString()} | Classification: RESTRICTED / OFFICIAL USE ONLY`, headerX, 66, { width: headerWidth, align: 'center' });
+
+        // Divider Line
+        doc.strokeColor('#b80d19').lineWidth(2).moveTo(40, 88).lineTo(555, 88).stroke();
+        
+        let currentY = 105;
+
+        // 1. Facility Operational Summary
+        doc.fillColor('#0b192c').fontSize(11).font('Helvetica-Bold').text('1. FACILITY OPERATIONAL SUMMARY', 40, currentY, { underline: true });
+        currentY += 20;
+        
+        doc.fontSize(10).font('Helvetica').fillColor('#333333');
+        doc.text(`• Total Registered Cases: ${totalCases}`, 45, currentY); currentY += 16;
+        doc.text(`• Facility Occupancy: ${occupiedBeds} / ${capacityBeds} Beds`, 45, currentY); currentY += 16;
+        doc.text(`• Critical Medical / Suicide Watch Flags: ${medicalFlags}`, 45, currentY); currentY += 16;
+        doc.text(`• Security Incidents (Last 24 Hours): ${incidents24h}`, 45, currentY); currentY += 16;
+        doc.text(`• Active Deportation Dispatches: ${activeDeportations}`, 45, currentY); currentY += 25;
+
+        // 2. Commander Directives & Risk Notices
+        doc.fillColor('#0b192c').fontSize(11).font('Helvetica-Bold').text('2. COMMANDER DIRECTIVES & RISK NOTICES', 40, currentY, { underline: true });
+        currentY += 20;
+
+        doc.fontSize(10).font('Helvetica').fillColor('#333333');
+        if (parseInt(incidents24h) > 0 || parseInt(medicalFlags) > 0) {
+            doc.fillColor('#b80d19').font('Helvetica-Bold').text('HIGH PRIORITY ATTENTION REQUIRED: Active medical isolation or recent security events recorded.', 45, currentY);
+        } else {
+            doc.fillColor('#2E7D32').font('Helvetica-Bold').text('ALL SYSTEMS NORMAL: Operations proceeding under standard security conditions.', 45, currentY);
+        }
+
+        // Footer Sign-off
+        currentY += 60;
+        doc.strokeColor('#cccccc').lineWidth(1).moveTo(40, currentY).lineTo(555, currentY).stroke();
+        currentY += 15;
+        doc.fillColor('#777777').fontSize(9).font('Helvetica').text('Report certified by PNGICSA Automated Command Engine.', 40, currentY, { align: 'right' });
+
+        doc.end();
+    } catch (err) {
+        console.error('Error generating briefing PDF:', err);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });

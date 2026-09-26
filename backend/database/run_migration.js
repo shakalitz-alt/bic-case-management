@@ -13,11 +13,11 @@ const pool = new Pool({
 
 async function runMigration() {
     try {
-        const sqlPath = path.join(__dirname, 'phase2_schema.sql');
+        const sqlPath = path.join(__dirname, 'phase3_schema.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
-        console.log('Running Phase 2 Schema Migration...');
+        console.log('Running Phase 3 Schema Migration...');
         await pool.query(sql);
-        console.log('✅ Phase 2 Tables Created Successfully!');
+        console.log('✅ Phase 3 Tables Created Successfully!');
     } catch (err) {
         console.error('❌ Migration Error:', err.message);
     } finally {
