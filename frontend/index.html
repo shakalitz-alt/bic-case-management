@@ -36,7 +36,7 @@
             <div class="text-center space-y-2">
                 <div class="h-20 flex items-center justify-center">
                     <img id="loginLogoImg" 
-                         src="assets/ICSA LOGO.png" 
+                         src="assets/ICSA LOGO1.png" 
                          alt="PNGICSA Logo" 
                          class="h-20 w-auto object-contain mx-auto" 
                          onerror="this.style.display='none'">
@@ -74,7 +74,7 @@
     <div id="appWorkspace" class="hidden min-h-screen flex flex-row">
 
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-slate-200/80 text-slate-700 border-r border-slate-300 flex flex-col justify-between flex-shrink-0 min-h-screen">
+        <aside class="w-64 bg-slate-200/80 text-slate-700 border-r border-slate-300 flex flex-col justify-between flex-shrink-0 min-h-screen z-30">
             <div>
                 <div class="p-4 border-b border-slate-300/80 flex items-center justify-center bg-slate-300/30">
                     <img src="assets/ICSA LOGO.png" alt="PNGICSA Logo" class="w-full max-h-12 object-contain" onerror="this.style.display='none'; document.getElementById('sidebarFallbackHeader').classList.remove('hidden');">
@@ -157,14 +157,20 @@
             </div>
         </aside>
 
-        <!-- RIGHT CONTENT WORKSPACE -->
-        <div class="flex-1 flex flex-col min-w-0 min-h-screen bg-brand-bg">
+        <!-- RIGHT CONTENT WORKSPACE WITH ENHANCED WATERMARK -->
+        <div class="flex-1 flex flex-col min-w-0 min-h-screen bg-brand-bg relative overflow-x-hidden">
             
-            <header class="bg-white border-b border-slate-200 h-16 px-6 flex items-center justify-between sticky top-0 z-20">
+            <!-- GLOBAL BACKGROUND WATERMARK LAYER (18% OPACITY FOR VISIBILITY) -->
+            <div class="fixed inset-0 left-64 top-16 pointer-events-none z-0 flex items-center justify-center opacity-[0.18]">
+                <img src="assets/ICSA LOGO1.png" alt="ICSA Watermark" class="w-[620px] max-w-[70vw] h-auto object-contain" onerror="this.style.display='none'">
+            </div>
+
+            <!-- HEADER -->
+            <header class="bg-white/90 backdrop-blur-xs border-b border-slate-200 h-16 px-6 flex items-center justify-between sticky top-0 z-20">
                 <div class="flex items-center space-x-4 flex-1 max-w-lg">
                     <div class="relative w-full">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" placeholder="Search POI name, PACIR ref, or passport number..." class="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-red focus:bg-white text-slate-800 font-medium">
+                        <input type="text" placeholder="Search POI name, PACIR ref, or passport number..." class="w-full pl-9 pr-4 py-2 bg-slate-100/90 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-red focus:bg-white text-slate-800 font-medium">
                     </div>
                 </div>
 
@@ -190,10 +196,11 @@
                 </div>
             </header>
 
-            <main class="flex-1 p-6 space-y-6">
+            <!-- MAIN WORKSPACE CONTENT -->
+            <main class="flex-1 p-6 space-y-6 relative z-10">
 
                 <!-- ALERT BANNER -->
-                <div id="operationalAlertBanner" class="hidden bg-red-600 text-white p-4 rounded-xl shadow-lg border border-red-700 flex items-center justify-between animate-pulse">
+                <div id="operationalAlertBanner" class="hidden bg-red-600/90 backdrop-blur-xs text-white p-4 rounded-xl shadow-lg border border-red-700 flex items-center justify-between animate-pulse">
                     <div class="flex items-center space-x-3">
                         <i class="fa-solid fa-triangle-exclamation text-2xl text-yellow-300"></i>
                         <div>
@@ -218,7 +225,7 @@
                         <h2 id="viewTitle" class="text-2xl font-black text-slate-900 mt-0.5">Operations Overview Console</h2>
                     </div>
                     <div class="flex items-center space-x-3">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50/90 backdrop-blur-xs text-amber-800 border border-amber-200">
                             <i class="fa-solid fa-shield-halved text-amber-600 mr-1.5"></i> Assigned Role: <span id="roleBadgeLabel" class="ml-1 uppercase">SYSTEM ADMIN</span>
                         </span>
                         <button onclick="refreshAllData()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5">
@@ -230,54 +237,49 @@
 
                 <!-- 1. OVERVIEW TAB -->
                 <div id="view-overview" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-                        <div class="bg-white p-5 rounded-xl border-t-4 border-brand-red border-x border-b border-slate-200 shadow-sm relative overflow-hidden">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending Admissions</p>
-                                    <h3 id="cardQueueCount" class="text-3xl font-black text-slate-900 mt-1">0</h3>
-                                    <p class="text-[11px] font-medium text-slate-500 mt-1">Requires DM review</p>
-                                </div>
-                                <div class="p-2.5 bg-red-50 text-brand-red rounded-lg"><i class="fa-solid fa-clock-rotate-left text-lg"></i></div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">En Route / Approved</p>
-                                    <h3 class="text-3xl font-black text-emerald-600 mt-1">12</h3>
-                                    <p class="text-[11px] font-medium text-slate-500 mt-1">Transfer in progress</p>
-                                </div>
-                                <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-truck-ramp-box text-lg"></i></div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Deferred Action</p>
-                                    <h3 class="text-3xl font-black text-amber-600 mt-1">2</h3>
-                                    <p class="text-[11px] font-medium text-slate-500 mt-1">Awaiting medical clearance</p>
-                                </div>
-                                <div class="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-lg"></i></div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facility Occupancy</p>
-                                    <h3 class="text-3xl font-black text-slate-900 mt-1">84 <span class="text-sm font-bold text-slate-400">/ 122</span></h3>
-                                    <p class="text-[11px] font-medium text-slate-500 mt-1">68.8% Total Capacity</p>
-                                </div>
-                                <div class="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-building-shield text-lg"></i></div>
-                            </div>
+                    <!-- HERO WELCOME BANNER (TRANSLUCENT BG SO EMBLEM IS CLEARLY VISIBLE) -->
+                    <div class="bg-white/60 backdrop-blur-xs rounded-2xl border border-slate-200/80 p-12 shadow-sm text-center space-y-4">
+                        <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+                            Welcome to PNGICSA Bomana Immigration Centre Case Management & PACIR System
+                        </h1>
+                        <p class="text-xl md:text-2xl font-bold text-slate-700 italic">
+                            “Paperless, secure, and fast processing.”
+                        </p>
+                        <div class="pt-4 text-xs font-semibold text-slate-500">
+                            For assistance, contact our support team at 
+                            <a href="mailto:ict.security@immigration.gov.pg" class="text-brand-navy font-bold underline hover:text-brand-red">
+                                ict.security@immigration.gov.pg
+                            </a>
                         </div>
                     </div>
 
+                    <!-- METRICS STRIP -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending Admissions</p>
+                            <h3 id="cardQueueCount" class="text-3xl font-black text-slate-900 mt-1">0</h3>
+                            <p class="text-[11px] font-medium text-slate-500 mt-1">Requires DM review</p>
+                        </div>
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">En Route / Approved</p>
+                            <h3 class="text-3xl font-black text-emerald-600 mt-1">12</h3>
+                            <p class="text-[11px] font-medium text-slate-500 mt-1">Transfer in progress</p>
+                        </div>
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Deferred Action</p>
+                            <h3 class="text-3xl font-black text-amber-600 mt-1">2</h3>
+                            <p class="text-[11px] font-medium text-slate-500 mt-1">Awaiting medical clearance</p>
+                        </div>
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facility Occupancy</p>
+                            <h3 class="text-3xl font-black text-slate-900 mt-1">84 <span class="text-sm font-bold text-slate-400">/ 122</span></h3>
+                            <p class="text-[11px] font-medium text-slate-500 mt-1">68.8% Total Capacity</p>
+                        </div>
+                    </div>
+
+                    <!-- ANALYTICS CHARTS GRID -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
                                 <span>POI Risk Level Breakdown</span>
                                 <i class="fa-solid fa-chart-pie text-slate-400"></i>
@@ -287,7 +289,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
                                 <span>Compound Occupancy Tracker</span>
                                 <i class="fa-solid fa-chart-simple text-slate-400"></i>
@@ -297,7 +299,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
                                 <span>Top Intakes by Nationality</span>
                                 <i class="fa-solid fa-flag text-slate-400"></i>
@@ -311,8 +313,8 @@
 
                 <!-- 2. PACIR ADMISSIONS TAB -->
                 <div id="view-admissions" class="hidden space-y-6">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-800 flex items-center">
                                 <i class="fa-solid fa-list-check mr-2 text-brand-red"></i>
                                 <span>Active PACIR Admissions Queue (Form BIC-01)</span>
@@ -325,7 +327,7 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead>
-                                    <tr class="bg-slate-100 border-b font-bold text-slate-500 uppercase">
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
                                         <th class="py-3 px-4">PACIR Ref #</th>
                                         <th class="py-3 px-4">POI Name</th>
                                         <th class="py-3 px-4">Nationality</th>
@@ -344,7 +346,7 @@
 
                 <!-- 3. COMPOUND ALLOCATIONS TAB -->
                 <div id="view-compounds" class="hidden space-y-6">
-                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center bg-white/80 backdrop-blur-xs p-4 rounded-xl border border-slate-200 shadow-sm">
                         <div>
                             <h3 class="text-sm font-bold text-slate-900 uppercase">Bomana Immigration Centre Facilities</h3>
                             <p class="text-xs text-slate-500">Real-Time Bed-Space Capacity & Risk Segregation Control</p>
@@ -356,14 +358,14 @@
                     </div>
 
                     <div id="compoundsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="p-6 bg-white rounded-xl border text-center text-slate-400">Loading compound inventory...</div>
+                        <div class="p-6 bg-white/80 rounded-xl border text-center text-slate-400">Loading compound inventory...</div>
                     </div>
                 </div>
 
                 <!-- 4. POI CASE FILES TAB -->
                 <div id="view-pois" class="hidden space-y-6">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-800 flex items-center">
                                 <i class="fa-solid fa-folder-open mr-2 text-brand-red"></i>
                                 <span>POI Master Case File Registry</span>
@@ -373,7 +375,7 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead>
-                                    <tr class="bg-slate-100 border-b font-bold text-slate-500 uppercase">
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
                                         <th class="py-3 px-4">Case File #</th>
                                         <th class="py-3 px-4">PACIR Ref #</th>
                                         <th class="py-3 px-4">POI Name</th>
@@ -393,8 +395,8 @@
 
                 <!-- 5. DEPORTATIONS TAB -->
                 <div id="view-deportations" class="hidden space-y-6">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-800 flex items-center">
                                 <i class="fa-solid fa-plane-departure mr-2 text-brand-red"></i>
                                 <span>Deportation, Voluntary Return & Removal Pipeline</span>
@@ -407,7 +409,7 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead>
-                                    <tr class="bg-slate-100 border-b font-bold text-slate-500 uppercase">
+                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
                                         <th class="py-3 px-4">Order Ref #</th>
                                         <th class="py-3 px-4">POI Name</th>
                                         <th class="py-3 px-4">Type</th>
@@ -427,8 +429,8 @@
 
                 <!-- 6. SYSADMIN TAB WITH DIAGNOSTICS GRID -->
                 <div id="view-sysadmin" class="hidden space-y-6">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-800 flex items-center">
                                 <i class="fa-solid fa-users-gear mr-2 text-brand-red"></i>
                                 <span>Authorized Operators & RBAC Roles</span>
@@ -447,7 +449,7 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead>
-                                    <tr class="bg-slate-100 border-b text-[11px] font-bold text-slate-500 uppercase">
+                                    <tr class="bg-slate-100/80 border-b text-[11px] font-bold text-slate-500 uppercase">
                                         <th class="py-3 px-4">Operator Name</th>
                                         <th class="py-3 px-4">Username</th>
                                         <th class="py-3 px-4">Email</th>
@@ -465,7 +467,7 @@
 
                     <!-- 3-COLUMN DIAGNOSTICS GRID -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="bg-white/80 backdrop-blur-xs p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
                                 <span>Database Connection</span>
                                 <i class="fa-solid fa-database text-emerald-600"></i>
@@ -478,7 +480,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="bg-white/80 backdrop-blur-xs p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
                                 <span>Node.js PM2 Service</span>
                                 <i class="fa-solid fa-server text-blue-600"></i>
@@ -491,7 +493,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="bg-white/80 backdrop-blur-xs p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
                                 <span>IIS Reverse Proxy</span>
                                 <i class="fa-solid fa-network-wired text-brand-red"></i>
@@ -505,8 +507,8 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-800 flex items-center">
                                 <i class="fa-solid fa-shield-halved mr-2 text-brand-red"></i>
                                 <span>System Audit Trail & Operational Logs</span>
@@ -519,7 +521,7 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
-                                    <tr class="bg-slate-100 border-b text-[11px] font-bold text-slate-500 uppercase">
+                                    <tr class="bg-slate-100/80 border-b text-[11px] font-bold text-slate-500 uppercase">
                                         <th class="py-3 px-4">Timestamp</th>
                                         <th class="py-3 px-4">Operator</th>
                                         <th class="py-3 px-4">Role</th>
@@ -739,6 +741,50 @@
         </div>
     </div>
 
+    <!-- NEW OPERATOR MODAL -->
+    <div id="userModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-user-plus text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">REGISTER NEW OPERATOR ACCOUNT</h3>
+                </div>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="submitNewUser(event)" class="p-6 space-y-4 text-xs font-medium">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Full Operator Name *</label>
+                    <input type="text" id="newFullName" required placeholder="e.g. John Doe" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Username *</label>
+                    <input type="text" id="newUsername" required placeholder="e.g. doe.j" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Email Address</label>
+                    <input type="email" id="newEmail" placeholder="jdoe@immigration.gov.pg" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">RBAC Role Delegation *</label>
+                    <select id="newRole" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
+                        <option value="CASE_OFFICER">CASE OFFICER</option>
+                        <option value="COMPLIANCE_OFFICER">COMPLIANCE OFFICER</option>
+                        <option value="DUTY_MANAGER">DUTY MANAGER</option>
+                        <option value="SYSTEM_ADMIN">SYSTEM ADMIN</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Initial Password *</label>
+                    <input type="password" id="newPassword" required value="AdminPass2026!" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red hover:bg-brand-darkRed text-white font-bold rounded-lg shadow">Create Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- RESET PASSWORD MODAL -->
     <div id="resetPasswordModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
@@ -773,7 +819,6 @@
         let riskChartInstance = null;
         let capacityChartInstance = null;
         let cachedCompoundsList = [];
-        let cachedPoisList = [];
 
         function getAuthHeaders() {
             return {
@@ -1006,7 +1051,6 @@
                 const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
                 const result = await res.json();
                 if (result.cases) {
-                    cachedPoisList = result.cases;
                     document.getElementById('casesTableBody').innerHTML = result.cases.map(c => `
                         <tr class="hover:bg-slate-50 transition">
                             <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || '<span class="text-amber-600 italic">PENDING</span>'}</td>
@@ -1084,12 +1128,7 @@
                 const data = await res.json();
                 const container = document.getElementById('compoundsContainer');
                 
-                if (!container) return;
-
-                if (!data.compounds || data.compounds.length === 0) {
-                    container.innerHTML = `<div class="col-span-3 p-6 bg-white rounded-xl text-center text-slate-400">No compound data available.</div>`;
-                    return;
-                }
+                if (!container || !data.compounds) return;
 
                 const totalBeds = data.compounds.reduce((acc, c) => acc + parseInt(c.total_capacity || 0), 0);
                 const occupiedBeds = data.compounds.reduce((acc, c) => acc + parseInt(c.current_occupancy || 0), 0);
@@ -1097,7 +1136,7 @@
                 const totalPct = Math.round((occupiedBeds / totalBeds) * 100);
 
                 let summaryHtml = `
-                    <div class="col-span-1 md:col-span-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 mb-2">
+                    <div class="col-span-1 md:col-span-3 bg-white/80 backdrop-blur-xs p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 mb-2">
                         <div class="flex justify-between items-center">
                             <div>
                                 <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Bomana Facility Occupancy Summary</h4>
@@ -1119,7 +1158,7 @@
                     const pois = comp.housed_pois || [];
 
                     return `
-                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
+                        <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
                             <div class="p-5 border-b border-slate-100">
                                 <div class="flex justify-between items-start mb-2">
                                     <div>
@@ -1137,7 +1176,7 @@
                                 <div class="text-right text-[10px] font-bold text-slate-500 mt-1">${pct}% Occupied</div>
                             </div>
 
-                            <div class="p-4 bg-slate-50 space-y-2 flex-1">
+                            <div class="p-4 bg-slate-50/80 space-y-2 flex-1">
                                 <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                                     <span>Housed Persons of Interest (${pois.length})</span>
                                     <i class="fa-solid fa-users text-slate-400"></i>
@@ -1167,9 +1206,7 @@
 
                 container.innerHTML = summaryHtml + cardsHtml;
 
-            } catch (err) {
-                console.error('Error loading compound occupancy:', err);
-            }
+            } catch (err) {}
         }
 
         async function loadDeportationsPipeline() {
@@ -1246,16 +1283,47 @@
                 } else {
                     banner.classList.add('hidden');
                 }
-            } catch (err) {
-                console.error('Failed to fetch operational alerts:', err);
-            }
+            } catch (err) {}
         }
 
         function dismissAlertBanner() {
             const banner = document.getElementById('operationalAlertBanner');
-            if (banner) {
-                banner.classList.add('hidden');
-            }
+            if (banner) banner.classList.add('hidden');
+        }
+
+        function openUserModal() {
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.add('hidden');
+        }
+
+        async function submitNewUser(event) {
+            event.preventDefault();
+            const payload = {
+                full_name: document.getElementById('newFullName').value,
+                username: document.getElementById('newUsername').value,
+                email: document.getElementById('newEmail').value,
+                role: document.getElementById('newRole').value,
+                password: document.getElementById('newPassword').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert('New Operator Created!');
+                    closeUserModal();
+                    loadSystemUsers();
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            } catch (err) {}
         }
 
         async function openLegalModal(pacirId, surname, givenNames) {
@@ -1286,7 +1354,6 @@
                     historyContainer.innerHTML = `<p class="text-slate-400 italic">No court filings recorded for this POI.</p>`;
                 }
             } catch (err) {
-                console.error('Error fetching legal history:', err);
                 historyContainer.innerHTML = `<p class="text-red-500 italic">Error loading legal history.</p>`;
             }
 
@@ -1299,15 +1366,8 @@
 
         async function submitLegalRecord(event) {
             event.preventDefault();
-
-            const pacirId = document.getElementById('legalPacirId').value;
-            if (!pacirId) {
-                alert('Error: No valid POI record selected.');
-                return;
-            }
-
             const payload = {
-                pacir_id: pacirId,
+                pacir_id: document.getElementById('legalPacirId').value,
                 court_name: document.getElementById('legalCourtName').value,
                 proceeding_type: document.getElementById('legalProceedingType').value,
                 case_file_ref: document.getElementById('legalCaseRef').value,
@@ -1324,20 +1384,13 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify(payload)
                 });
-
                 const result = await res.json();
-                
                 if (result.status === 'SUCCESS') {
-                    alert('Legal Record & Court Case Saved Successfully!');
+                    alert('Legal Record Saved!');
                     closeLegalModal();
                     loadCasesRegistry();
-                } else {
-                    alert(`Server Error: ${result.message}`);
                 }
-            } catch (err) {
-                console.error('Network or fetch error:', err);
-                alert('Failed to connect to backend server.');
-            }
+            } catch (err) {}
         }
 
         async function triggerManualBackup() {
