@@ -41,7 +41,9 @@
                          class="h-20 w-auto object-contain mx-auto" 
                          onerror="this.style.display='none'">
                 </div>
-                <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-3">PNG <span class="text-brand-red">BIC Management</span></h2>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">
+                    BIC Case Management & PACIR System
+                </h1>
                 <p class="text-xs text-slate-500 max-w-xs mx-auto">Authenticate with official credentials to access the Bomana Centre platform.</p>
             </div>
 
@@ -77,7 +79,7 @@
         <aside class="w-64 bg-slate-200/80 text-slate-700 border-r border-slate-300 flex flex-col justify-between flex-shrink-0 min-h-screen z-30">
             <div>
                 <div class="p-4 border-b border-slate-300/80 flex items-center justify-center bg-slate-300/30">
-                    <img id="sidebarLogoImg"
+                    <img id="sidebarLogoImg" 
                          src="assets/ICSA LOGO.png" 
                          alt="PNGICSA Logo" 
                          class="h-12 w-auto object-contain mx-auto" 
@@ -181,10 +183,9 @@
             </div>
         </aside>
 
-        <!-- RIGHT CONTENT WORKSPACE WITH GLOBAL BACKGROUND WATERMARK -->
+        <!-- RIGHT CONTENT WORKSPACE -->
         <div class="flex-1 flex flex-col min-w-0 min-h-screen bg-brand-bg relative overflow-x-hidden">
             
-            <!-- GLOBAL BACKGROUND WATERMARK LAYER -->
             <div class="fixed inset-0 left-64 top-16 pointer-events-none z-0 flex items-center justify-center opacity-[0.18]">
                 <img src="assets/ICSA LOGO1.png" alt="ICSA Watermark" class="w-[620px] max-w-[70vw] h-auto object-contain" onerror="this.style.display='none'">
             </div>
@@ -282,28 +283,24 @@
 
                     <!-- OVERVIEW STATS CARDS BLOCK -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <!-- 1. PENDING ADMISSIONS -->
                         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                             <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pending Admissions</div>
                             <div id="stat-pending-admissions" class="text-2xl font-bold text-brand-dark">0</div>
                             <div class="text-xs text-slate-500 mt-1">Requires DM review</div>
                         </div>
 
-                        <!-- 2. ACTIVE / APPROVED -->
                         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                             <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">En Route / Approved</div>
                             <div id="stat-active-cases" class="text-2xl font-bold text-emerald-600">0</div>
                             <div class="text-xs text-slate-500 mt-1">Transfer in progress</div>
                         </div>
 
-                        <!-- 3. DEFERRED / MEDICAL FLAGS -->
                         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Medical &amp; Risk Flags</div>
+                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Medical & Risk Flags</div>
                             <div id="stat-risk-flags" class="text-2xl font-bold text-amber-600">0</div>
                             <div class="text-xs text-slate-500 mt-1">Critical watch active</div>
                         </div>
 
-                        <!-- 4. FACILITY OCCUPANCY (DYNAMIC DB SYNC) -->
                         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                             <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Facility Occupancy</div>
                             <div id="stat-occupancy" class="text-2xl font-bold text-brand-dark">0 / 0</div>
@@ -460,7 +457,7 @@
                     </div>
                 </div>
 
-                <!-- 6. SYSADMIN TAB WITH DIAGNOSTICS GRID -->
+                <!-- 6. SYSADMIN TAB -->
                 <div id="view-sysadmin" class="hidden space-y-6">
                     <div class="bg-white/80 backdrop-blur-xs rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
@@ -697,7 +694,7 @@
         </div>
     </div>
 
-    <!-- INTAKE MODAL (FORM BIC-01) -->
+    <!-- MODALS -->
     <div id="intakeModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-8 overflow-hidden flex flex-col">
             <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
@@ -807,328 +804,277 @@
         </div>
     </div>
 
-    <!-- LEGAL MODAL -->
-    <div id="legalModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
-            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-scale-balanced text-amber-400 text-xl"></i>
-                    <div>
-                        <h3 class="font-bold text-sm tracking-wide">COURT PROCEEDINGS & INJUNCTIONS</h3>
-                        <p id="legalModalPoiName" class="text-[10px] text-slate-300">POI Legal Filing</p>
-                    </div>
-                </div>
-                <button onclick="closeLegalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <div class="p-4 bg-slate-100 border-b border-slate-200 max-h-36 overflow-y-auto">
-                <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Saved Court Filings & Injunction History</h4>
-                <div id="legalHistoryContainer" class="space-y-2 text-xs">
-                    <p class="text-slate-400 italic">No court filings recorded for this POI.</p>
-                </div>
-            </div>
-
-            <form onsubmit="submitLegalRecord(event)" class="p-6 space-y-4 text-xs font-medium">
-                <input type="hidden" id="legalPacirId">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Jurisdiction / Court *</label>
-                        <select id="legalCourtName" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
-                            <option value="National Court of PNG">National Court of PNG</option>
-                            <option value="Supreme Court of PNG">Supreme Court of PNG</option>
-                            <option value="District Court Port Moresby">District Court Port Moresby</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Proceeding Type *</label>
-                        <select id="legalProceedingType" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
-                            <option value="BAIL_APPLICATION">Bail Application</option>
-                            <option value="HABEAS_CORPUS">Habeas Corpus Petition</option>
-                            <option value="JUDICIAL_REVIEW">Judicial Review</option>
-                            <option value="DEPORTATION_INJUNCTION">Deportation Injunction</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Court Case Ref # *</label>
-                        <input type="text" id="legalCaseRef" required placeholder="OS-2026-008" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red uppercase">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Legal Counsel / Law Firm</label>
-                        <input type="text" id="legalRepresentation" placeholder="e.g. Pacific Legal Chambers" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Next Hearing Date</label>
-                        <input type="date" id="legalHearingDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Case Status *</label>
-                        <select id="legalCaseStatus" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
-                            <option value="PENDING">PENDING</option>
-                            <option value="INJUNCTION_ACTIVE">INJUNCTION ACTIVE (STAY ON REMOVAL)</option>
-                            <option value="DISMISSED">DISMISSED</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="legalInjunctionGranted" class="rounded text-amber-600 focus:ring-amber-500 h-4 w-4">
-                        <span class="font-bold text-amber-900">Court Injunction Granted (Halts Removal / Transfer Operations)</span>
-                    </label>
-                </div>
-
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Legal Directives / Notes</label>
-                    <textarea id="legalNotes" rows="2" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red" placeholder="Add directives from High Court order..."></textarea>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeLegalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">Save Legal Filing</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- NEW OPERATOR MODAL -->
-    <div id="userModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
-            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-user-plus text-brand-red"></i>
-                    <h3 class="font-bold text-sm tracking-wide">REGISTER NEW OPERATOR ACCOUNT</h3>
-                </div>
-                <button onclick="closeUserModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form onsubmit="submitNewUser(event)" class="p-6 space-y-4 text-xs font-medium">
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Full Operator Name *</label>
-                    <input type="text" id="newFullName" required placeholder="e.g. John Doe" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
-                </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Username *</label>
-                    <input type="text" id="newUsername" required placeholder="e.g. doe.j" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
-                </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Email Address</label>
-                    <input type="email" id="newEmail" placeholder="jdoe@immigration.gov.pg" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red">
-                </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">RBAC Role Delegation *</label>
-                    <select id="newRole" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
-                        <option value="CASE_OFFICER">CASE OFFICER</option>
-                        <option value="COMPLIANCE_OFFICER">COMPLIANCE OFFICER</option>
-                        <option value="DUTY_MANAGER">DUTY MANAGER</option>
-                        <option value="SYSTEM_ADMIN">SYSTEM ADMIN</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Initial Password *</label>
-                    <input type="password" id="newPassword" required value="AdminPass2026!" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
-                </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-brand-red hover:bg-brand-darkRed text-white font-bold rounded-lg shadow">Create Account</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- RESET PASSWORD MODAL -->
-    <div id="resetPasswordModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
-            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-key text-amber-400"></i>
-                    <h3 class="font-bold text-sm tracking-wide">RESET OPERATOR PASSWORD</h3>
-                </div>
-                <button onclick="closeResetPasswordModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form onsubmit="submitResetPassword(event)" class="p-6 space-y-4 text-xs font-medium">
-                <input type="hidden" id="resetUserId">
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Operator Account</label>
-                    <input type="text" id="resetUsernameDisplay" disabled class="w-full px-3 py-2 bg-slate-100 border rounded-lg font-bold text-slate-700">
-                </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">New Password *</label>
-                    <input type="password" id="resetNewPassword" required placeholder="Enter new password" class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-brand-red font-bold">
-                </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">Reset Password</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MEDICAL ENTRY MODAL -->
-    <div id="medicalModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <!-- DEPORTATION / REMOVAL MODAL CONTAINER -->
+    <div id="deportationModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
             <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
                 <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-heart-pulse text-brand-red"></i>
-                    <h3 class="font-bold text-sm tracking-wide">POI MEDICAL SCREENING RECORD</h3>
+                    <i class="fa-solid fa-plane-departure text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">REGISTER NEW REMOVAL DISPATCH</h3>
                 </div>
-                <button onclick="closeMedicalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="closeDeportationModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
-            <form onsubmit="submitMedicalRecord(event)" class="p-6 space-y-4 text-xs font-medium">
-                <input type="hidden" id="medPacirId">
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Blood Pressure</label>
-                        <input type="text" id="medBp" placeholder="120/80" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Pulse (bpm)</label>
-                        <input type="text" id="medPulse" placeholder="72" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Temp (°C)</label>
-                        <input type="number" step="0.1" id="medTemp" placeholder="36.6" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Pre-existing Conditions</label>
-                        <input type="text" id="medConditions" placeholder="Diabetes, Asthma, etc." class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Known Allergies</label>
-                        <input type="text" id="medAllergies" placeholder="Penicillin, etc." class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                </div>
-                <div class="bg-red-50 p-3 rounded-lg border border-red-200 space-y-2">
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="medContagious" class="rounded text-brand-red h-4 w-4">
-                        <span class="font-bold text-red-900">Contagious / Infectious Disease Risk</span>
-                    </label>
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="medSuicide" class="rounded text-brand-red h-4 w-4">
-                        <span class="font-bold text-red-900">Mandatory Suicide Watch Protocol</span>
-                    </label>
-                </div>
-                <div class="grid grid-cols-2 gap-3 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="medFitDetention" checked class="rounded text-emerald-600 h-4 w-4">
-                        <span class="font-bold text-emerald-900">Fit for Detention</span>
-                    </label>
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="medFitTravel" class="rounded text-emerald-600 h-4 w-4">
-                        <span class="font-bold text-emerald-900">Fit for Travel Clearance</span>
-                    </label>
-                </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeMedicalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg shadow">Save Medical Log</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- PROPERTY LOG MODAL -->
-    <div id="propertyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
-            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-boxes-packing text-amber-400"></i>
-                    <h3 class="font-bold text-sm tracking-wide">LOG POI PROPERTY / VALUABLES</h3>
-                </div>
-                <button onclick="closePropertyModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form onsubmit="submitPropertyRecord(event)" class="p-6 space-y-4 text-xs font-medium">
-                <input type="hidden" id="propPacirId">
+            <form onsubmit="submitDeportationDispatch(event)" class="p-6 space-y-4 text-xs font-medium">
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Item Category *</label>
-                    <select id="propCategory" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
-                        <option value="CASH">CASH / CURRENCY</option>
-                        <option value="ELECTRONICS">ELECTRONICS (MOBILE, LAPTOP)</option>
-                        <option value="DOCUMENTS">PERSONAL DOCUMENTS / PASSPORT</option>
-                        <option value="LUGGAGE">LUGGAGE / CLOTHING BAG</option>
-                        <option value="JEWELRY">JEWELRY / VALUABLES</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Item Description *</label>
-                    <input type="text" id="propDesc" required placeholder="e.g. iPhone 14 Pro, Black Leather Wallet" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Serial Number</label>
-                        <input type="text" id="propSerial" placeholder="Optional" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Storage Locker # *</label>
-                        <input type="text" id="propLocker" required placeholder="LOCKER-A04" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closePropertyModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg shadow">Generate Tag & Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- VISITOR BOOKING MODAL -->
-    <div id="visitorModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
-            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-id-card-clip text-amber-400"></i>
-                    <h3 class="font-bold text-sm tracking-wide">SCHEDULE VISITOR ACCESS</h3>
-                </div>
-                <button onclick="closeVisitorModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form onsubmit="submitVisitorRecord(event)" class="p-6 space-y-4 text-xs font-medium">
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Target POI Case *</label>
-                    <select id="visPacirId" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                    <label class="block text-slate-700 font-bold mb-1">Target POI Case File *</label>
+                    <select id="depPacirId" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
                         <option value="">-- SELECT POI CASE FILE --</option>
                     </select>
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Removal Type *</label>
+                        <select id="depRemovalType" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="DEPORTATION_ORDER">DEPORTATION ORDER</option>
+                            <option value="VOLUNTARY_RETURN">VOLUNTARY RETURN</option>
+                            <option value="EXPELLED_SECURITY">SECURITY EXPULSION</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Destination Country *</label>
+                        <input type="text" id="depDestination" required placeholder="e.g. Philippines, Australia" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Embassy CTD Status *</label>
+                        <select id="depCtdStatus" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="ISSUED">CTD ISSUED / VALID</option>
+                            <option value="PENDING">PENDING EMBASSY ISSUANCE</option>
+                            <option value="NOT_REQUIRED">NATIONAL PASSPORT HELD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">CTD Document Ref #</label>
+                        <input type="text" id="depCtdRef" placeholder="CTD-2026-99" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Flight / Route Number</label>
+                        <input type="text" id="depFlight" placeholder="e.g. PX008 / QF58" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Departure Date</label>
+                        <input type="date" id="depDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Visitor Category *</label>
-                    <select id="visType" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
-                        <option value="LEGAL_COUNSEL">LEGAL COUNSEL / LAWYER</option>
-                        <option value="DIPLOMATIC_UNHCR">DIPLOMATIC / UNHCR DELEGATE</option>
-                        <option value="FAMILY">FAMILY / NEXT OF KIN</option>
-                        <option value="OFFICIAL">GOVERNMENT / POLICE OFFICIAL</option>
+                    <label class="block text-slate-700 font-bold mb-1">Escort Team Details</label>
+                    <input type="text" id="depEscort" placeholder="e.g. 2 x Compliance Officers" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeDeportationModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red text-white font-bold rounded-lg shadow">Register Dispatch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEGAL & COURT HEARINGS MODAL -->
+    <div id="legalModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-gavel text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">POI LEGAL HEARINGS & JUDICIAL REVIEWS</h3>
+                </div>
+                <button onclick="closeLegalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-6 overflow-y-auto text-xs font-medium">
+                <!-- Recorded Hearings List -->
+                <div>
+                    <h4 class="font-bold text-slate-800 text-xs mb-2">RECORDED COURT HEARINGS & INJUNCTIONS</h4>
+                    <div id="courtCasesList" class="space-y-2"></div>
+                </div>
+
+                <!-- Add New Court Hearing Form -->
+                <form onsubmit="submitCourtCase(event)" class="border-t pt-4 space-y-3">
+                    <input type="hidden" id="legalPacirId">
+                    <h4 class="font-bold text-slate-800 text-xs">LOG NEW COURT HEARING / INJUNCTION</h4>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Court Jurisdiction / Name *</label>
+                            <input type="text" id="courtName" required placeholder="e.g. Waigani National Court" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Court Ref / Matter No. *</label>
+                            <input type="text" id="courtRef" required placeholder="e.g. OS-2026-104" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Hearing Date</label>
+                            <input type="date" id="hearingDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 font-bold mb-1">Hearing Outcome / Status</label>
+                            <select id="hearingOutcome" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                                <option value="ADJOURNED">ADJOURNED</option>
+                                <option value="INTERIM_INJUNCTION">INTERIM INJUNCTION</option>
+                                <option value="DISMISSED">APPLICATION DISMISSED</option>
+                                <option value="DEPORTATION_UPHELD">DEPORTATION ORDER UPHELD</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 bg-red-50 p-3 rounded-lg border border-red-200">
+                        <input type="checkbox" id="stayGranted" class="w-4 h-4 text-brand-red rounded focus:ring-brand-red">
+                        <label for="stayGranted" class="text-red-900 font-bold cursor-pointer">
+                            Grant Legal Stay / Injunction of Removal (Blocks Deportation Dispatch)
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Judge Directives & Legal Notes</label>
+                        <textarea id="judgeDirectives" rows="2" placeholder="Enter judicial orders or legal counsel instructions..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-2">
+                        <button type="button" onclick="closeLegalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Close</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-lg shadow">Save Court Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDICAL & HEALTH LOG MODAL -->
+    <div id="medicalModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-heart-pulse text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">UPDATE POI MEDICAL & HEALTH REGISTRY</h3>
+                </div>
+                <button onclick="closeMedicalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form onsubmit="submitMedicalRecord(event)" class="p-6 space-y-4 text-xs font-medium overflow-y-auto">
+                <input type="hidden" id="medPacirId">
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target POI Case File *</label>
+                    <select id="medPacirSelect" onchange="document.getElementById('medPacirId').value=this.value" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="">-- SELECT POI CASE FILE --</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Full Visitor Name *</label>
-                    <input type="text" id="visName" required placeholder="e.g. Attorney Sarah Keke" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Blood Pressure (mmHg)</label>
+                        <input type="text" id="medBp" placeholder="e.g. 120/80" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Heart Rate (BPM)</label>
+                        <input type="number" id="medHeartRate" placeholder="e.g. 72" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Temperature (°C)</label>
+                        <input type="text" id="medTemp" placeholder="e.g. 36.6" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Suicide Watch Status</label>
+                        <select id="medSuicideWatch" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="false">NO - NORMAL MONITORING</option>
+                            <option value="true">YES - MANDATORY 15-MIN CHECK</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                    <input type="checkbox" id="medFitForTravel" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                    <label for="medFitForTravel" class="text-emerald-900 font-bold cursor-pointer">
+                        Fit for Travel Clearance (Clear for Deportation Dispatch)
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Medical Assessment & Clinical Notes</label>
+                    <textarea id="medNotes" rows="3" placeholder="Enter clinical observations, prescribed medication, or isolation directives..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeMedicalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red text-white font-bold rounded-lg shadow">Save Medical Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VISITORS & LEGAL ACCESS MODAL -->
+    <div id="visitorModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-user-shield text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">SCHEDULE LEGAL & VISITOR ACCESS BOOKING</h3>
+                </div>
+                <button onclick="closeVisitorModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form onsubmit="submitVisitorBooking(event)" class="p-6 space-y-4 text-xs font-medium">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target POI Case File *</label>
+                    <select id="visPacirSelect" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="">-- SELECT POI CASE FILE --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Visitor Category *</label>
+                        <select id="visCategory" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="LEGAL_COUNSEL">LEGAL COUNSEL</option>
+                            <option value="EMBASSY_OFFICIAL">EMBASSY / DIPLOMATIC</option>
+                            <option value="FAMILY_MEMBER">FAMILY / PERSONAL</option>
+                            <option value="HUMAN_RIGHTS_MONITOR">HUMAN RIGHTS MONITOR</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Visitor Full Name *</label>
+                        <input type="text" id="visName" required placeholder="e.g. Counsel Sarah Kila" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-slate-700 font-bold mb-1">Organization / Firm</label>
-                        <input type="text" id="visOrg" placeholder="e.g. Pacific Legal" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                        <input type="text" id="visOrg" placeholder="e.g. Kila & Associates" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
                     </div>
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">ID Ref Number *</label>
-                        <input type="text" id="visIdNum" required placeholder="e.g. PASSPORT / BAR ID" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                        <label class="block text-slate-700 font-bold mb-1">ID / NID / Passport #</label>
+                        <input type="text" id="visIdNum" placeholder="e.g. NID-882341" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
                     </div>
                 </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">Scheduled Date/Time *</label>
-                        <input type="datetime-local" id="visTime" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                        <label class="block text-slate-700 font-bold mb-1">Scheduled Access Date *</label>
+                        <input type="date" id="visDate" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
                     </div>
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">Consultation Room *</label>
-                        <input type="text" id="visRoom" required value="ROOM-1" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
+                        <label class="block text-slate-700 font-bold mb-1">Assigned Interview Room</label>
+                        <input type="text" id="visRoom" placeholder="e.g. LEGAL-ROOM-1" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
                     </div>
                 </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Purpose & Special Instructions</label>
+                    <textarea id="visPurpose" rows="2" placeholder="e.g. Formal legal consultation regarding Waigani National Court application..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
+                </div>
+
                 <div class="flex justify-end space-x-3 pt-3 border-t">
                     <button type="button" onclick="closeVisitorModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg shadow">Confirm Booking</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg shadow">Confirm Booking</button>
                 </div>
             </form>
         </div>
@@ -1139,71 +1085,118 @@
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
             <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
                 <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-triangle-exclamation text-red-500 text-lg"></i>
+                    <i class="fa-solid fa-triangle-exclamation text-brand-red"></i>
                     <h3 class="font-bold text-sm tracking-wide">REPORT SECURITY INCIDENT</h3>
                 </div>
                 <button onclick="closeIncidentModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <form onsubmit="submitIncidentRecord(event)" class="p-6 space-y-4 text-xs font-medium">
+            
+            <form onsubmit="submitIncidentReport(event)" class="p-6 space-y-4 text-xs font-medium">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target Compound / Location *</label>
+                    <select id="incCompound" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="">-- SELECT COMPOUND --</option>
+                        <option value="DIWAI">DIWAI COMPOUND</option>
+                        <option value="RAUNWARA">RAUNWARA COMPOUND</option>
+                        <option value="KARANAS">KARANAS COMPOUND</option>
+                        <option value="BALUS">BALUS COMPOUND</option>
+                        <option value="KUNAI">KUNAI COMPOUND</option>
+                        <option value="ADMIN_PERIMETER">MAIN ADMIN & PERIMETER</option>
+                    </select>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-slate-700 font-bold mb-1">Severity Level *</label>
-                        <select id="incSeverity" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold text-red-700">
-                            <option value="LOW">LOW (MINOR BREACH)</option>
-                            <option value="MEDIUM">MEDIUM (ALTERCATION / DAMAGE)</option>
-                            <option value="HIGH">HIGH (CONTRABAND / ASSAULT)</option>
-                            <option value="CRITICAL_LOCKDOWN">CRITICAL (LOCKDOWN TRIGGERED)</option>
+                        <select id="incSeverity" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="LOW">LOW - MINOR INFRACTION</option>
+                            <option value="MEDIUM">MEDIUM - VERBAL / DISTURBANCE</option>
+                            <option value="HIGH">HIGH - PHYSICAL / BREACH</option>
+                            <option value="CRITICAL">CRITICAL - RIOT / ESCAPE RISK</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">Category *</label>
-                        <select id="incCategory" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
-                            <option value="ALTERCATION">PHYSICAL ALTERCATION</option>
-                            <option value="CONTRABAND">CONTRABAND DISCOVERY</option>
-                            <option value="PROPERTY_DAMAGE">PROPERTY DAMAGE</option>
-                            <option value="SECURITY_BREACH">PERIMETER BREACH</option>
-                            <option value="MEDICAL_EMERGENCY">MEDICAL EMERGENCY</option>
+                        <label class="block text-slate-700 font-bold mb-1">Involved POI (Optional)</label>
+                        <select id="incPacirSelect" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="">-- UNLINKED / GENERAL INCIDENT --</option>
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Compound *</label>
-                        <select id="incCompound" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
-                            <option value="">-- SELECT COMPOUND --</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Specific Location *</label>
-                        <input type="text" id="incLocation" required placeholder="e.g. Mess Hall / Cell Block A" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                </div>
+
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Incident Summary & Details *</label>
-                    <textarea id="incSummary" required rows="2" class="w-full px-3 py-2 bg-slate-50 border rounded-lg" placeholder="Describe the security event..."></textarea>
+                    <label class="block text-slate-700 font-bold mb-1">Incident Summary & Actions Taken *</label>
+                    <textarea id="incSummary" required rows="3" placeholder="Provide full details of the security incident and immediate response..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
                 </div>
-                <div>
-                    <label class="block text-slate-700 font-bold mb-1">Immediate Action Taken</label>
-                    <input type="text" id="incAction" placeholder="e.g. POIs segregated, medical dispatched" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                </div>
-                <div class="bg-red-50 p-3 rounded-lg border border-red-200 space-y-2">
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="incLockdown" class="rounded text-red-600 h-4 w-4">
-                        <span class="font-bold text-red-900">Trigger Immediate Compound Lockdown</span>
-                    </label>
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" id="incEscalate" checked class="rounded text-red-600 h-4 w-4">
-                        <span class="font-bold text-red-900">Escalate Alert to Duty Manager</span>
+
+                <div class="flex items-center space-x-2 bg-red-50 p-3 rounded-lg border border-red-200">
+                    <input type="checkbox" id="incEscalate" class="w-4 h-4 text-brand-red rounded focus:ring-brand-red">
+                    <label for="incEscalate" class="text-red-900 font-bold cursor-pointer">
+                        Escalate Alert to Duty Manager & Command Console
                     </label>
                 </div>
+
                 <div class="flex justify-end space-x-3 pt-3 border-t">
                     <button type="button" onclick="closeIncidentModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-red-700 text-white font-bold rounded-lg shadow">Log & Dispatch Alert</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red text-white font-bold rounded-lg shadow">Submit Incident Report</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- SYSTEM USER / OPERATOR PROVISIONING MODAL -->
+    <div id="userModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-user-plus text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">PROVISION NEW SYSTEM OPERATOR</h3>
+                </div>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form onsubmit="submitUserRegistration(event)" class="p-6 space-y-4 text-xs font-medium">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Username *</label>
+                    <input type="text" id="usrName" required placeholder="e.g. officer.kila" class="w-full px-3 py-2 bg-slate-50 border rounded-lg lowercase font-bold">
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Full Name / Designation *</label>
+                    <input type="text" id="usrFullName" required placeholder="e.g. Compliance Officer Sarah Kila" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Assigned Role *</label>
+                        <select id="usrRole" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="INTAKE_OFFICER">INTAKE OFFICER</option>
+                            <option value="MEDICAL_OFFICER">MEDICAL OFFICER</option>
+                            <option value="SECURITY_OFFICER">SECURITY OFFICER</option>
+                            <option value="DEPORTATION_OFFICER">DEPORTATION OFFICER</option>
+                            <option value="COMMANDER">COMMANDER / EXECUTIVE</option>
+                            <option value="SYSTEM_ADMIN">SYSTEM ADMIN</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Department / Division</label>
+                        <input type="text" id="usrDept" placeholder="e.g. Enforcement & Operations" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Initial Password *</label>
+                    <input type="password" id="usrPass" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg shadow">Provision User Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
     <script>
         const API_BASE = '/v1';
         let authToken = localStorage.getItem('bic_auth_token') || null;
@@ -1271,6 +1264,7 @@
 
         function switchTab(tabKey) {
             const views = ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'sysadmin', 'medical', 'property', 'visitors', 'incidents'];
+            
             views.forEach(v => {
                 const el = document.getElementById(`view-${v}`);
                 if (el) el.classList.add('hidden');
@@ -1289,14 +1283,34 @@
                 activeBtn.className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-brand-navy text-white font-bold border-l-4 border-brand-red shadow-sm";
             }
 
-            document.getElementById('breadcrumbCurrent').innerText = tabKey.toUpperCase();
-            document.getElementById('viewTitle').innerText = `${tabKey.charAt(0).toUpperCase() + tabKey.slice(1)} Management Console`;
+            // Dynamic Title & Breadcrumb Custom Display Names
+            const customTitles = {
+                'pois': "POI's",
+                'overview': "Operations Overview",
+                'admissions': "PACIR Admissions",
+                'compounds': "Compound Allocations",
+                'deportations': "Deportation & Logistics",
+                'medical': "Medical & Health Registry",
+                'property': "Property Custody & Bags",
+                'visitors': "Visitors & Legal Counsel",
+                'incidents': "Security Incident Log",
+                'sysadmin': "Audit & Diagnostics"
+            };
 
-            if (tabKey === 'overview') loadAnalytics();
-            else if (tabKey === 'admissions') fetchQueue();
+            const displayTitle = customTitles[tabKey] || (tabKey.charAt(0).toUpperCase() + tabKey.slice(1));
+
+            const breadcrumb = document.getElementById('breadcrumbCurrent');
+            if (breadcrumb) breadcrumb.innerText = displayTitle.toUpperCase();
+            
+            const title = document.getElementById('viewTitle');
+            if (title) title.innerText = `${displayTitle} Management Console`;
+
+            // Trigger tab-specific loaders
+            if (tabKey === 'deportations') loadDeportationsPipeline();
+            else if (tabKey === 'overview') { loadAnalytics(); loadDashboardOverviewMetrics(); }
+            else if (tabKey === 'admissions') loadAdmissionsQueue();
             else if (tabKey === 'compounds') loadCompoundOccupancy();
             else if (tabKey === 'pois') loadCasesRegistry();
-            else if (tabKey === 'deportations') loadDeportationsPipeline();
             else if (tabKey === 'sysadmin') { loadSystemUsers(); loadAuditLogs(); }
             else if (tabKey === 'medical') loadMedicalRegistry();
             else if (tabKey === 'property') loadPropertyRegistry();
@@ -1355,27 +1369,71 @@
             }
         }
 
-        async function fetchQueue() {
+        async function loadAdmissionsQueue() {
+            const tableBody = document.getElementById('queueTableBody');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading queue...</td></tr>`;
+
             try {
-                const res = await fetch(`${API_BASE}/admissions/queue`, { headers: getAuthHeaders() });
-                const result = await res.json();
-                if (result.data) {
-                    document.getElementById('sidebarQueueBadge').innerText = result.count || 0;
-                    document.getElementById('cardQueueCount').innerText = result.count || 0;
-                    document.getElementById('queueTableBody').innerHTML = result.data.map(item => `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="py-3 px-4 font-bold text-slate-900">${item.pacir_ref_number}</td>
-                            <td class="py-3 px-4 font-bold text-slate-800">${item.given_names} ${item.surname}</td>
-                            <td class="py-3 px-4">${item.nationality}</td>
-                            <td class="py-3 px-4"><span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-[10px]">${item.priority}</span></td>
-                            <td class="py-3 px-4"><span class="bg-red-50 text-red-700 font-bold px-2.5 py-1 rounded-full text-[10px]">${item.overall_calculated_risk}</span></td>
-                            <td class="py-3 px-4 text-right">
-                                <a href="${API_BASE}/pacir/${item.pacir_id}/pdf" target="_blank" class="bg-brand-red text-white px-2.5 py-1 rounded font-bold">Form BIC-01 PDF</a>
+                const res = await fetch(`${API_BASE}/admissions`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!res.ok) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500 font-semibold">Failed to fetch queue data.</td></tr>`;
+                    return;
+                }
+
+                const responseData = await res.json();
+                const records = responseData.data || responseData.admissions || [];
+
+                document.getElementById('sidebarQueueBadge').innerText = records.length || 0;
+
+                if (!Array.isArray(records) || records.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">No active PACIR admissions in queue.</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = records.map(item => {
+                    const fullName = item.poi_name || `${item.surname || ''}, ${item.given_names || ''}`.trim();
+                    const refNumber = item.pacir_ref_number || 'N/A';
+                    const priority = item.priority || 'NORMAL';
+                    const riskLevel = item.risk_level || item.overall_calculated_risk || 'LOW';
+
+                    const priorityBadge = priority === 'IMMEDIATE'
+                        ? '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">IMMEDIATE</span>'
+                        : '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">NORMAL</span>';
+
+                    let riskBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white">LOW</span>';
+                    if (riskLevel === 'CRITICAL') {
+                        riskBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-600 text-white">CRITICAL</span>';
+                    } else if (riskLevel === 'HIGH') {
+                        riskBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white">HIGH</span>';
+                    }
+
+                    return `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-sm">
+                            <td class="py-3.5 px-4 font-bold text-brand-dark">${refNumber}</td>
+                            <td class="py-3.5 px-4 font-semibold text-slate-800">${fullName || 'Unknown POI'}</td>
+                            <td class="py-3.5 px-4 text-slate-600">${item.nationality || 'Unspecified'}</td>
+                            <td class="py-3.5 px-4">${priorityBadge}</td>
+                            <td class="py-3.5 px-4">${riskBadge}</td>
+                            <td class="py-3.5 px-4 text-right">
+                                <a href="${API_BASE}/pacir/${item.pacir_id}/pdf" target="_blank" class="bg-brand-red text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-brand-darkRed transition shadow-sm inline-block">
+                                    <i class="fa-solid fa-file-pdf mr-1"></i> Form BIC-01
+                                </a>
                             </td>
                         </tr>
-                    `).join('');
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Admissions queue render error:', err);
+                if (tableBody) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500 font-semibold">Error rendering queue entries.</td></tr>`;
                 }
-            } catch (err) {}
+            }
         }
 
         async function loadAnalytics() {
@@ -1433,6 +1491,50 @@
             }
         }
 
+        async function loadDashboardOverviewMetrics() {
+            try {
+                const res = await fetch(`${API_BASE}/analytics/summary`, { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const result = await res.json();
+
+                if (result.status === 'SUCCESS' && result.data) {
+                    const data = result.data;
+                    let totalOccupied = 0, totalCapacity = 0;
+
+                    if (data.compoundCapacity && Array.isArray(data.compoundCapacity)) {
+                        data.compoundCapacity.forEach(compound => {
+                            totalOccupied += parseInt(compound.current_occupancy || 0);
+                            totalCapacity += parseInt(compound.total_capacity || 0);
+                        });
+                    }
+
+                    const occupancyElem = document.getElementById('stat-occupancy');
+                    const occupancySubtext = document.getElementById('stat-occupancy-subtext');
+                    if (occupancyElem) occupancyElem.innerText = `${totalOccupied} / ${totalCapacity}`;
+                    if (occupancySubtext) {
+                        const pct = totalCapacity > 0 ? ((totalOccupied / totalCapacity) * 100).toFixed(1) : '0.0';
+                        occupancySubtext.innerText = `${pct}% Total Capacity`;
+                    }
+
+                    const casesRes = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                    if (casesRes.ok) {
+                        const casesData = await casesRes.json();
+                        const casesList = casesData.cases || casesData.data || [];
+                        
+                        const pendingCount = casesList.filter(c => !c.allocated_compound).length;
+                        const activeCount = casesList.filter(c => c.allocated_compound).length;
+                        const riskCount = casesList.filter(c => c.overall_calculated_risk === 'CRITICAL' || c.overall_calculated_risk === 'HIGH').length;
+
+                        if (document.getElementById('stat-pending-admissions')) document.getElementById('stat-pending-admissions').innerText = pendingCount;
+                        if (document.getElementById('stat-active-cases')) document.getElementById('stat-active-cases').innerText = activeCount;
+                        if (document.getElementById('stat-risk-flags')) document.getElementById('stat-risk-flags').innerText = riskCount;
+                    }
+                }
+            } catch (err) {
+                console.error('Error updating overview cards:', err);
+            }
+        }
+
         async function loadCasesRegistry() {
             try {
                 if (cachedCompoundsList.length === 0) {
@@ -1472,8 +1574,8 @@
                                         Allocate Case File #
                                     </button>
                                 ` : ''}
-                                <button onclick="openLegalModal('${c.pacir_id}', '${c.surname}', '${c.given_names}')" class="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
-                                    <i class="fa-solid fa-gavel mr-1"></i> Legal Status
+                                <button onclick="openLegalModal('${c.pacir_id}')" class="bg-indigo-700 hover:bg-indigo-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
+                                    <i class="fa-solid fa-gavel mr-1"></i> Legal File
                                 </button>
                                 <a href="${API_BASE}/pacir/${c.pacir_id}/pdf" target="_blank" class="bg-brand-red hover:bg-brand-darkRed text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
                                     <i class="fa-solid fa-file-pdf mr-1"></i> Form BIC-01
@@ -1588,9 +1690,6 @@
                                             <span>File: <strong class="text-brand-navy">${p.bic_case_file_number || 'PENDING'}</strong></span>
                                             <span>Pass: ${p.passport_number || 'N/A'}</span>
                                         </div>
-                                        <div class="text-[10px] font-semibold text-slate-600">
-                                            Nationality: <span class="text-slate-800">${p.nationality}</span>
-                                        </div>
                                     </div>
                                 `).join('') : '<div class="text-xs text-slate-400 italic p-3 text-center bg-white border border-dashed rounded-lg">No POIs currently allocated to this compound.</div>'}
                             </div>
@@ -1604,23 +1703,53 @@
         }
 
         async function loadDeportationsPipeline() {
+            const tableBody = document.getElementById('deportationTableBody');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading deportation pipeline...</td></tr>`;
+
             try {
                 const res = await fetch(`${API_BASE}/deportations`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                if (data.deportations) {
-                    document.getElementById('deportationTableBody').innerHTML = data.deportations.map(d => `
-                        <tr class="hover:bg-slate-50">
-                            <td class="py-3 px-4 font-bold text-brand-red">${d.deportation_order_ref}</td>
-                            <td class="py-3 px-4 font-bold">${d.surname.toUpperCase()}, ${d.given_names}</td>
-                            <td class="py-3 px-4">${d.removal_type}</td>
-                            <td class="py-3 px-4 font-bold">${d.destination_country}</td>
-                            <td class="py-3 px-4">${d.embassy_ctd_status}</td>
-                            <td class="py-3 px-4 font-mono">${d.flight_number || 'TBD'}</td>
-                            <td class="py-3 px-4 font-bold">${d.logistics_status}</td>
-                        </tr>
-                    `).join('');
+                
+                if (!res.ok) {
+                    tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500 font-semibold">Failed to fetch deportation records (HTTP ${res.status}).</td></tr>`;
+                    return;
                 }
-            } catch (err) {}
+
+                const data = await res.json();
+                const deportations = data.deportations || data.data || [];
+
+                if (!Array.isArray(deportations) || deportations.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 font-semibold">No active deportation or removal dispatches in pipeline.</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = deportations.map(d => {
+                    const fullName = `${d.surname ? d.surname.toUpperCase() : ''}, ${d.given_names || ''}`.trim();
+                    const orderRef = d.deportation_order_ref || 'N/A';
+                    const removalType = d.removal_type || 'DEPORTATION_ORDER';
+                    const destination = d.destination_country || 'Unspecified';
+                    const ctdStatus = d.embassy_ctd_status || 'PENDING';
+                    const flight = d.flight_number || 'TBD';
+                    const status = d.logistics_status || 'SCHEDULED';
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+                            <td class="py-3.5 px-4 font-bold text-brand-red font-mono">${orderRef}</td>
+                            <td class="py-3.5 px-4 font-bold text-slate-900">${fullName || 'Unknown'}</td>
+                            <td class="py-3.5 px-4 text-slate-700 font-semibold">${removalType}</td>
+                            <td class="py-3.5 px-4 font-bold text-brand-navy">${destination}</td>
+                            <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">${ctdStatus}</span></td>
+                            <td class="py-3.5 px-4 font-mono font-bold text-slate-800">${flight}</td>
+                            <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">${status}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error loading deportations pipeline:', err);
+                tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500 font-semibold">Error rendering deportation records.</td></tr>`;
+            }
         }
 
         async function loadSystemUsers() {
@@ -1671,7 +1800,7 @@
                     document.getElementById('medicalTableBody').innerHTML = data.cases.map(c => `
                         <tr class="hover:bg-slate-50">
                             <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
-                            <td class="py-3 px-4 font-bold">${c.surname.toUpperCase()}, ${c.given_names}</td>
+                            <td class="py-3 px-4 font-bold">${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}</td>
                             <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">COMPLETED</span></td>
                             <td class="py-3 px-4 font-bold ${c.suicide_risk_identified ? 'text-red-600' : 'text-slate-500'}">${c.suicide_risk_identified ? 'CRITICAL WATCH' : 'NORMAL'}</td>
                             <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">APPROVED</span></td>
@@ -1692,7 +1821,7 @@
                     document.getElementById('propertyTableBody').innerHTML = data.cases.map(c => `
                         <tr class="hover:bg-slate-50">
                             <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
-                            <td class="py-3 px-4 font-bold">${c.surname.toUpperCase()}, ${c.given_names}</td>
+                            <td class="py-3 px-4 font-bold">${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}</td>
                             <td class="py-3 px-4 font-mono text-brand-red font-bold">BAG-${c.pacir_id.substring(0,6)}</td>
                             <td class="py-3 px-4 font-bold">ELECTRONICS / CASH</td>
                             <td class="py-3 px-4 font-bold">LOCKER-A01</td>
@@ -1717,7 +1846,7 @@
                             <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">${v.visitor_type}</span></td>
                             <td class="py-3 px-4 font-mono uppercase">${v.id_type_number}</td>
                             <td class="py-3 px-4 font-bold">${v.consultation_room}</td>
-                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">${v.visit_status}</span></td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">${v.visit_status || 'SCHEDULED'}</span></td>
                         </tr>
                     `).join('');
                 }
@@ -1735,7 +1864,7 @@
                             <td class="py-3 px-4 font-bold">${i.incident_category}</td>
                             <td class="py-3 px-4">${i.incident_location}</td>
                             <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-red-100 text-red-800 font-bold">${i.severity_level}</span></td>
-                            <td class="py-3 px-4 font-bold text-amber-600">${i.resolution_status}</td>
+                            <td class="py-3 px-4 font-bold text-amber-600">${i.resolution_status || 'OPEN'}</td>
                         </tr>
                     `).join('');
                 }
@@ -1764,246 +1893,31 @@
             if (banner) banner.classList.add('hidden');
         }
 
-        function openUserModal() { document.getElementById('userModal').classList.remove('hidden'); }
-        function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
-
-        async function submitNewUser(event) {
-            event.preventDefault();
-            const payload = {
-                full_name: document.getElementById('newFullName').value,
-                username: document.getElementById('newUsername').value,
-                email: document.getElementById('newEmail').value,
-                role: document.getElementById('newRole').value,
-                password: document.getElementById('newPassword').value
-            };
-
+        async function downloadExecutiveBriefing() {
             try {
-                const res = await fetch(`${API_BASE}/users`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(payload)
+                const res = await fetch(`${API_BASE}/reports/executive-briefing`, {
+                    headers: getAuthHeaders()
                 });
-                const result = await res.json();
-                if (result.status === 'SUCCESS') {
-                    alert('New Operator Created!');
-                    closeUserModal();
-                    loadSystemUsers();
-                } else {
-                    alert(`Error: ${result.message}`);
-                }
-            } catch (err) {}
-        }
 
-        async function openLegalModal(pacirId, surname, givenNames) {
-            document.getElementById('legalPacirId').value = pacirId;
-            document.getElementById('legalModalPoiName').innerText = `POI: ${givenNames} ${surname ? surname.toUpperCase() : ''}`;
-            
-            const historyContainer = document.getElementById('legalHistoryContainer');
-            historyContainer.innerHTML = `<p class="text-slate-400 italic">Loading court filings...</p>`;
-            
-            try {
-                const res = await fetch(`${API_BASE}/cases/${pacirId}/legal`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                
-                if (data.legal_records && data.legal_records.length > 0) {
-                    historyContainer.innerHTML = data.legal_records.map(rec => `
-                        <div class="p-2 bg-white rounded border border-slate-200 space-y-1">
-                            <div class="flex justify-between font-bold text-slate-800">
-                                <span>${rec.court_name} (${rec.case_file_ref})</span>
-                                <span class="${rec.injunction_granted ? 'text-red-600 font-black' : 'text-amber-600'}">${rec.case_status}</span>
-                            </div>
-                            <div class="text-[11px] text-slate-600">
-                                Proceeding: <strong>${rec.proceeding_type}</strong> | Legal Counsel: ${rec.legal_representation}
-                            </div>
-                            ${rec.notes ? `<div class="text-[10px] text-slate-500 italic bg-slate-50 p-1 rounded">"${rec.notes}"</div>` : ''}
-                        </div>
-                    `).join('');
-                } else {
-                    historyContainer.innerHTML = `<p class="text-slate-400 italic">No court filings recorded for this POI.</p>`;
+                if (!res.ok) {
+                    const errData = await res.json();
+                    alert(`Failed to generate briefing: ${errData.message}`);
+                    return;
                 }
+
+                const blob = await res.blob();
+                const pdfUrl = URL.createObjectURL(blob);
+                window.open(pdfUrl, '_blank');
             } catch (err) {
-                historyContainer.innerHTML = `<p class="text-red-500 italic">Error loading legal history.</p>`;
+                console.error('Error downloading briefing:', err);
+                alert('Network error while generating daily briefing.');
             }
-
-            document.getElementById('legalModal').classList.remove('hidden');
-        }
-
-        function closeLegalModal() { document.getElementById('legalModal').classList.add('hidden'); }
-
-        async function submitLegalRecord(event) {
-            event.preventDefault();
-            const payload = {
-                pacir_id: document.getElementById('legalPacirId').value,
-                court_name: document.getElementById('legalCourtName').value,
-                proceeding_type: document.getElementById('legalProceedingType').value,
-                case_file_ref: document.getElementById('legalCaseRef').value,
-                legal_representation: document.getElementById('legalRepresentation').value,
-                next_hearing_date: document.getElementById('legalHearingDate').value || null,
-                case_status: document.getElementById('legalCaseStatus').value,
-                injunction_granted: document.getElementById('legalInjunctionGranted').checked,
-                notes: document.getElementById('legalNotes').value
-            };
-
-            try {
-                const res = await fetch(`${API_BASE}/cases/legal`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(payload)
-                });
-                const result = await res.json();
-                if (result.status === 'SUCCESS') {
-                    alert('Legal Record Saved!');
-                    closeLegalModal();
-                    loadCasesRegistry();
-                }
-            } catch (err) {}
-        }
-
-        function openMedicalModal(pacirId) {
-            document.getElementById('medPacirId').value = pacirId;
-            document.getElementById('medicalModal').classList.remove('hidden');
-        }
-        function closeMedicalModal() { document.getElementById('medicalModal').classList.add('hidden'); }
-
-        async function submitMedicalRecord(event) {
-            event.preventDefault();
-            const payload = {
-                pacir_id: document.getElementById('medPacirId').value,
-                blood_pressure: document.getElementById('medBp').value,
-                pulse_rate: document.getElementById('medPulse').value,
-                temperature_c: document.getElementById('medTemp').value,
-                pre_existing_conditions: document.getElementById('medConditions').value,
-                allergies: document.getElementById('medAllergies').value,
-                contagious_disease_risk: document.getElementById('medContagious').checked,
-                suicide_watch_active: document.getElementById('medSuicide').checked,
-                fit_for_detention: document.getElementById('medFitDetention').checked,
-                fit_for_travel: document.getElementById('medFitTravel').checked
-            };
-            const res = await fetch(`${API_BASE}/medical`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.status === 'SUCCESS') { alert('Medical Record Saved!'); closeMedicalModal(); loadMedicalRegistry(); }
-        }
-
-        function openPropertyModal(pacirId) {
-            document.getElementById('propPacirId').value = pacirId;
-            document.getElementById('propertyModal').classList.remove('hidden');
-        }
-        function closePropertyModal() { document.getElementById('propertyModal').classList.add('hidden'); }
-
-        async function submitPropertyRecord(event) {
-            event.preventDefault();
-            const payload = {
-                pacir_id: document.getElementById('propPacirId').value,
-                item_category: document.getElementById('propCategory').value,
-                item_description: document.getElementById('propDesc').value,
-                serial_number: document.getElementById('propSerial').value,
-                storage_locker_number: document.getElementById('propLocker').value
-            };
-            const res = await fetch(`${API_BASE}/property`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.status === 'SUCCESS') { alert(`Property Item Saved!\nGenerated Tag: ${result.item.bag_tag_qr_code}`); closePropertyModal(); loadPropertyRegistry(); }
-        }
-
-        async function openVisitorModal() {
-            const select = document.getElementById('visPacirId');
-            select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
-            if (cachedCasesList.length === 0) {
-                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                cachedCasesList = data.cases || [];
-            }
-            cachedCasesList.forEach(c => {
-                select.innerHTML += `<option value="${c.pacir_id}">${c.surname.toUpperCase()}, ${c.given_names} (${c.bic_case_file_number || 'PENDING'})</option>`;
-            });
-            document.getElementById('visitorModal').classList.remove('hidden');
-        }
-        function closeVisitorModal() { document.getElementById('visitorModal').classList.add('hidden'); }
-
-        async function submitVisitorRecord(event) {
-            event.preventDefault();
-            const payload = {
-                pacir_id: document.getElementById('visPacirId').value,
-                visitor_type: document.getElementById('visType').value,
-                visitor_name: document.getElementById('visName').value,
-                organization_or_relation: document.getElementById('visOrg').value,
-                id_type_number: document.getElementById('visIdNum').value,
-                scheduled_start_time: document.getElementById('visTime').value,
-                consultation_room: document.getElementById('visRoom').value
-            };
-            const res = await fetch(`${API_BASE}/visitors`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.status === 'SUCCESS') { alert('Visitor Access Scheduled!'); closeVisitorModal(); loadVisitorRegistry(); }
-        }
-
-        async function openIncidentModal() {
-            const select = document.getElementById('incCompound');
-            select.innerHTML = '<option value="">-- SELECT COMPOUND --</option>';
-            if (cachedCompoundsList.length === 0) {
-                const res = await fetch(`${API_BASE}/compounds/occupancy`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                cachedCompoundsList = data.compounds || [];
-            }
-            cachedCompoundsList.forEach(c => {
-                select.innerHTML += `<option value="${c.compound_id}">${c.compound_name} (${c.compound_type || 'General'})</option>`;
-            });
-            document.getElementById('incidentModal').classList.remove('hidden');
-        }
-        function closeIncidentModal() { document.getElementById('incidentModal').classList.add('hidden'); }
-
-        async function submitIncidentRecord(event) {
-            event.preventDefault();
-            const payload = {
-                compound_id: document.getElementById('incCompound').value,
-                severity_level: document.getElementById('incSeverity').value,
-                incident_category: document.getElementById('incCategory').value,
-                incident_location: document.getElementById('incLocation').value,
-                summary_description: document.getElementById('incSummary').value,
-                action_taken: document.getElementById('incAction').value,
-                lockdown_triggered: document.getElementById('incLockdown').checked,
-                duty_manager_escalated: document.getElementById('incEscalate').checked
-            };
-            const res = await fetch(`${API_BASE}/incidents`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.status === 'SUCCESS') { alert(`Incident Reported!\nRef: ${result.incident.incident_ref_no}`); closeIncidentModal(); loadIncidentRegistry(); }
-        }
-
-        async function triggerManualBackup() {
-            if (!confirm('Run manual on-demand database backup?')) return;
-            try {
-                const res = await fetch(`${API_BASE}/sysadmin/backup`, { method: 'POST', headers: getAuthHeaders() });
-                const result = await res.json();
-                if (result.status === 'SUCCESS') alert(`Backup Created: ${result.filename}`);
-            } catch (err) {}
-        }
-
-        function openResetPasswordModal(userId, username) {
-            document.getElementById('resetUserId').value = userId;
-            document.getElementById('resetUsernameDisplay').value = username;
-            document.getElementById('resetNewPassword').value = '';
-            document.getElementById('resetPasswordModal').classList.remove('hidden');
-        }
-
-        function closeResetPasswordModal() { document.getElementById('resetPasswordModal').classList.add('hidden'); }
-
-        async function submitResetPassword(event) {
-            event.preventDefault();
-            try {
-                const res = await fetch(`${API_BASE}/users/${document.getElementById('resetUserId').value}/password`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ new_password: document.getElementById('resetNewPassword').value })
-                });
-                const result = await res.json();
-                if (result.status === 'SUCCESS') {
-                    alert(result.message);
-                    closeResetPasswordModal();
-                }
-            } catch (err) {}
         }
 
         function refreshAllData() {
-            fetchQueue();
+            loadAdmissionsQueue();
             loadAnalytics();
+            loadDashboardOverviewMetrics();
             loadCasesRegistry();
             loadCompoundOccupancy();
             loadDeportationsPipeline();
@@ -2036,93 +1950,472 @@
                 }
             }
         });
-        async function downloadExecutiveBriefing() {
-    try {
-        const res = await fetch(`${API_BASE}/reports/executive-briefing`, {
-            headers: getAuthHeaders()
-        });
 
-        if (!res.ok) {
-            const errData = await res.json();
-            alert(`Failed to generate briefing: ${errData.message}`);
-            return;
+        // ============================================================
+        // LEGAL & COURT HEARINGS MODAL HANDLERS
+        // ============================================================
+        async function openLegalModal(pacirId) {
+            document.getElementById('legalPacirId').value = pacirId;
+            const courtList = document.getElementById('courtCasesList');
+            courtList.innerHTML = '<div class="p-4 text-center text-slate-400 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Fetching court history...</div>';
+
+            document.getElementById('legalModal').classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${pacirId}/court`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const hearings = data.court_cases || data.data || [];
+
+                if (hearings.length === 0) {
+                    courtList.innerHTML = '<div class="p-3 text-center text-slate-500 bg-slate-50 rounded border border-dashed">No recorded court hearings or legal injunctions for this POI.</div>';
+                    return;
+                }
+
+                courtList.innerHTML = hearings.map(h => `
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                        <div class="flex justify-between items-center font-bold text-slate-900">
+                            <span>${h.court_name || 'National Court'} (${h.court_reference_number || 'N/A'})</span>
+                            <span class="px-2 py-0.5 text-[10px] rounded font-bold ${h.stay_of_deportation_granted ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'}">
+                                ${h.stay_of_deportation_granted ? 'INJUNCTION ACTIVE' : 'NO STAY'}
+                            </span>
+                        </div>
+                        <p class="text-slate-600 text-[11px]"><strong>Hearing Date:</strong> ${h.hearing_date || 'Pending'} | <strong>Outcome:</strong> ${h.hearing_outcome || 'Scheduled'}</p>
+                        <p class="text-slate-500 text-[11px] italic">${h.judge_directives || 'No directives recorded.'}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Error loading legal history:', e);
+                courtList.innerHTML = '<div class="p-3 text-center text-red-500">Failed to load legal history.</div>';
+            }
         }
 
-        const blob = await res.blob();
-        const pdfUrl = URL.createObjectURL(blob);
-        window.open(pdfUrl, '_blank');
-    } catch (err) {
-        console.error('Error downloading briefing:', err);
-        alert('Network error while generating daily briefing.');
-    }
-}
-// ==========================================
-// DYNAMIC DASHBOARD OVERVIEW METRICS FETCH
-// ==========================================
-async function loadDashboardOverviewMetrics() {
-    try {
-        const res = await fetch(`${API_BASE}/analytics/summary`, {
-            headers: getAuthHeaders()
-        });
-        
-        if (!res.ok) return;
-        const result = await res.json();
+        function closeLegalModal() {
+            document.getElementById('legalModal').classList.add('hidden');
+        }
 
-        if (result.status === 'SUCCESS' && result.data) {
-            const data = result.data;
+        async function submitCourtCase(event) {
+            event.preventDefault();
+            const pacirId = document.getElementById('legalPacirId').value;
+            const payload = {
+                court_name: document.getElementById('courtName').value,
+                court_reference_number: document.getElementById('courtRef').value,
+                hearing_date: document.getElementById('hearingDate').value || null,
+                hearing_outcome: document.getElementById('hearingOutcome').value,
+                stay_of_deportation_granted: document.getElementById('stayGranted').checked,
+                judge_directives: document.getElementById('judgeDirectives').value
+            };
 
-            // 1. Calculate live compound occupancy
-            let totalOccupied = 0;
-            let totalCapacity = 0;
-
-            if (data.compoundCapacity && Array.isArray(data.compoundCapacity)) {
-                data.compoundCapacity.forEach(compound => {
-                    totalOccupied += parseInt(compound.current_occupancy || 0);
-                    totalCapacity += parseInt(compound.total_capacity || 0);
+            try {
+                const res = await fetch(`${API_BASE}/cases/${pacirId}/court`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
                 });
-            }
-
-            // 2. Update Facility Occupancy Card
-            const occupancyElem = document.getElementById('stat-occupancy');
-            const occupancySubtext = document.getElementById('stat-occupancy-subtext');
-            if (occupancyElem) {
-                occupancyElem.innerText = `${totalOccupied} / ${totalCapacity}`;
-            }
-            if (occupancySubtext) {
-                const pct = totalCapacity > 0 ? ((totalOccupied / totalCapacity) * 100).toFixed(1) : '0.0';
-                occupancySubtext.innerText = `${pct}% Total Capacity`;
-            }
-
-            // 3. Update Pending, Active, and Risk Metrics from DB
-            const casesRes = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
-            if (casesRes.ok) {
-                const casesData = await casesRes.json();
-                const casesList = casesData.cases || casesData.data || [];
-                
-                const pendingCount = casesList.filter(c => !c.allocated_compound).length;
-                const activeCount = casesList.filter(c => c.allocated_compound).length;
-                const riskCount = casesList.filter(c => c.overall_calculated_risk === 'CRITICAL' || c.overall_calculated_risk === 'HIGH').length;
-
-                if (document.getElementById('stat-pending-admissions')) {
-                    document.getElementById('stat-pending-admissions').innerText = pendingCount;
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert('Court Case / Hearing Record Saved Successfully!');
+                    openLegalModal(pacirId); // Refresh history list inside modal
+                } else {
+                    alert(`Error: ${result.message}`);
                 }
-                if (document.getElementById('stat-active-cases')) {
-                    document.getElementById('stat-active-cases').innerText = activeCount;
-                }
-                if (document.getElementById('stat-risk-flags')) {
-                    document.getElementById('stat-risk-flags').innerText = riskCount;
-                }
+            } catch(err) {
+                alert('Failed to save court record.');
             }
         }
-    } catch (err) {
-        console.error('Error updating overview cards:', err);
-    }
-}
 
-// Call during initial page load and sync feed clicks
-document.addEventListener('DOMContentLoaded', () => {
-    loadDashboardOverviewMetrics();
-});
+        // ============================================================
+        // EXPLICIT DEPORTATION MODAL HANDLERS
+        // ============================================================
+        window.openDeportationModal = async function() {
+            const modal = document.getElementById('deportationModal');
+            const select = document.getElementById('depPacirId');
+
+            if (select) {
+                select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
+                try {
+                    if (typeof cachedCasesList === 'undefined' || !cachedCasesList || cachedCasesList.length === 0) {
+                        const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                        const data = await res.json();
+                        cachedCasesList = data.cases || data.data || [];
+                    }
+                    cachedCasesList.forEach(c => {
+                        const fullName = `${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}`.trim();
+                        select.innerHTML += `<option value="${c.pacir_id}">${fullName} (${c.bic_case_file_number || 'PENDING'})</option>`;
+                    });
+                } catch (e) {
+                    console.error('Error populating deportation POI select:', e);
+                }
+            }
+
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.warn('deportationModal element not found in DOM.');
+            }
+        };
+
+        window.closeDeportationModal = function() {
+            const modal = document.getElementById('deportationModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitDeportationDispatch = async function(event) {
+            event.preventDefault();
+            const payload = {
+                pacir_id: document.getElementById('depPacirId')?.value,
+                removal_type: document.getElementById('depRemovalType')?.value,
+                destination_country: document.getElementById('depDestination')?.value,
+                embassy_ctd_status: document.getElementById('depCtdStatus')?.value,
+                ctd_document_ref: document.getElementById('depCtdRef')?.value,
+                flight_number: document.getElementById('depFlight')?.value,
+                departure_date: document.getElementById('depDate')?.value || null,
+                escort_team_details: document.getElementById('depEscort')?.value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/deportations/register`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert(`Deportation Dispatch Registered!\nRef: ${result.deportation?.deportation_order_ref || 'OK'}`);
+                    closeDeportationModal();
+                    loadDeportationsPipeline();
+                } else {
+                    alert(`Error registering dispatch: ${result.message}`);
+                }
+            } catch (err) {
+                console.error('Submit deportation dispatch error:', err);
+                alert('Network error while registering deportation dispatch.');
+            }
+        };
+
+        // ============================================================
+        // MEDICAL MODAL HANDLERS
+        // ============================================================
+        window.openMedicalModal = async function(pacirId = null) {
+            const modal = document.getElementById('medicalModal');
+            const select = document.getElementById('medPacirSelect');
+            const pacirInput = document.getElementById('medPacirId');
+            if (pacirInput) pacirInput.value = pacirId || '';
+
+            if (select) {
+                select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
+                try {
+                    if (typeof cachedCasesList === 'undefined' || !cachedCasesList || cachedCasesList.length === 0) {
+                        const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                        const data = await res.json();
+                        cachedCasesList = data.cases || data.data || [];
+                    }
+                    cachedCasesList.forEach(c => {
+                        const fullName = `${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}`.trim();
+                        const isSelected = pacirId && c.pacir_id === pacirId ? 'selected' : '';
+                        select.innerHTML += `<option value="${c.pacir_id}" ${isSelected}>${fullName} (${c.bic_case_file_number || 'PENDING'})</option>`;
+                    });
+                } catch (e) {
+                    console.error('Error populating medical POI select:', e);
+                }
+            }
+
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeMedicalModal = function() {
+            const modal = document.getElementById('medicalModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitMedicalRecord = async function(event) {
+            event.preventDefault();
+            const pacirId = document.getElementById('medPacirId')?.value || document.getElementById('medPacirSelect')?.value;
+
+            if (!pacirId) {
+                alert('Please select a valid POI Case File.');
+                return;
+            }
+
+            const payload = {
+                pacir_id: pacirId,
+                blood_pressure: document.getElementById('medBp')?.value,
+                pulse_rate: document.getElementById('medHeartRate')?.value,
+                temperature_c: document.getElementById('medTemp')?.value,
+                suicide_watch_active: document.getElementById('medSuicideWatch')?.value === 'true',
+                fit_for_travel: document.getElementById('medFitForTravel')?.checked,
+                notes: document.getElementById('medNotes')?.value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/medical`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert('Medical & Health Record Saved Successfully!');
+                    closeMedicalModal();
+                    if (typeof loadMedicalRegistry === 'function') loadMedicalRegistry();
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            } catch(err) {
+                console.error('Error submitting medical log:', err);
+                alert('Failed to save medical log.');
+            }
+        };
+
+        // ============================================================
+        // VISITORS & LEGAL COUNSEL MODAL HANDLERS
+        // ============================================================
+        window.openVisitorModal = async function() {
+            const modal = document.getElementById('visitorModal');
+            const select = document.getElementById('visPacirSelect');
+
+            if (select) {
+                select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
+                try {
+                    if (typeof cachedCasesList === 'undefined' || !cachedCasesList || cachedCasesList.length === 0) {
+                        const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                        const data = await res.json();
+                        cachedCasesList = data.cases || data.data || [];
+                    }
+                    cachedCasesList.forEach(c => {
+                        const fullName = `${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}`.trim();
+                        select.innerHTML += `<option value="${c.pacir_id}">${fullName} (${c.bic_case_file_number || 'PENDING'})</option>`;
+                    });
+                } catch (e) {
+                    console.error('Error populating visitor POI select:', e);
+                }
+            }
+
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeVisitorModal = function() {
+            const modal = document.getElementById('visitorModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitVisitorBooking = async function(event) {
+            event.preventDefault();
+            const pacirId = document.getElementById('visPacirSelect')?.value;
+
+            if (!pacirId) {
+                alert('Please select a valid POI Case File.');
+                return;
+            }
+
+            const payload = {
+                pacir_id: pacirId,
+                visitor_type: document.getElementById('visCategory')?.value,
+                visitor_name: document.getElementById('visName')?.value,
+                organization_or_relation: document.getElementById('visOrg')?.value,
+                id_type_number: document.getElementById('visIdNum')?.value || 'N/A',
+                scheduled_start_time: document.getElementById('visDate')?.value,
+                consultation_room: document.getElementById('visRoom')?.value,
+                notes: document.getElementById('visPurpose')?.value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/visitors`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert(`Legal & Visitor Access Booking Scheduled!\nBooking Ref: ${result.booking?.visitor_log_id || result.visitor_id || 'CONFIRMED'}`);
+                    closeVisitorModal();
+                    if (typeof loadVisitorRegistry === 'function') loadVisitorRegistry();
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+            } catch(err) {
+                console.error('Error submitting visitor booking:', err);
+                alert('Failed to save visitor access booking.');
+            }
+        };
+
+        // ============================================================
+        // SECURITY INCIDENT MODAL HANDLERS
+        // ============================================================
+        window.openIncidentModal = async function() {
+            const modal = document.getElementById('incidentModal');
+            const select = document.getElementById('incPacirSelect');
+
+            if (select) {
+                select.innerHTML = '<option value="">-- UNLINKED / GENERAL INCIDENT --</option>';
+                try {
+                    if (typeof cachedCasesList === 'undefined' || !cachedCasesList || cachedCasesList.length === 0) {
+                        const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                        const data = await res.json();
+                        cachedCasesList = data.cases || data.data || [];
+                    }
+                    cachedCasesList.forEach(c => {
+                        const fullName = `${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}`.trim();
+                        select.innerHTML += `<option value="${c.pacir_id}">${fullName} (${c.bic_case_file_number || 'PENDING'})</option>`;
+                    });
+                } catch (e) {
+                    console.error('Error populating incident POI select:', e);
+                }
+            }
+
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeIncidentModal = function() {
+            const modal = document.getElementById('incidentModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitIncidentReport = async function(event) {
+            event.preventDefault();
+            const summary = document.getElementById('incSummary')?.value;
+
+            const payload = {
+                incident_location: document.getElementById('incCompound')?.value,
+                severity_level: document.getElementById('incSeverity')?.value,
+                primary_poi_id: document.getElementById('incPacirSelect')?.value || null,
+                incident_category: 'SECURITY_BREACH',
+                summary_description: summary,
+                action_taken: summary,
+                duty_manager_escalated: document.getElementById('incEscalate')?.checked
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/incidents`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert(`Security Incident Logged Successfully!\nIncident Ref: ${result.incident?.incident_ref_no || 'CONFIRMED'}`);
+                    closeIncidentModal();
+                    if (typeof loadIncidentRegistry === 'function') loadIncidentRegistry();
+                } else {
+                    alert(`Error logging incident: ${result.message}`);
+                }
+            } catch(err) {
+                console.error('Error submitting incident report:', err);
+                alert('Failed to log security incident.');
+            }
+        };
+
+        // ============================================================
+        // SYSTEM USER / OPERATOR MODAL HANDLERS
+        // ============================================================
+        window.openUserModal = function() {
+            const modal = document.getElementById('userModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.warn('userModal element not found in DOM.');
+            }
+        };
+
+        window.closeUserModal = function() {
+            const modal = document.getElementById('userModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitUserRegistration = async function(event) {
+            event.preventDefault();
+
+            const payload = {
+                username: document.getElementById('usrName')?.value,
+                full_name: document.getElementById('usrFullName')?.value,
+                role: document.getElementById('usrRole')?.value,
+                email: null,
+                password: document.getElementById('usrPass')?.value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert(`Operator Provisioned Successfully!\nUser: ${payload.username}`);
+                    closeUserModal();
+                    if (typeof loadSystemUsers === 'function') loadSystemUsers();
+                } else {
+                    alert(`Error provisioning user: ${result.message}`);
+                }
+            } catch(err) {
+                console.error('Error creating user account:', err);
+                alert('Failed to provision operator account.');
+            }
+        };
+
+        // ============================================================
+        // MANUAL BACKUP TRIGGER HANDLER
+        // ============================================================
+        window.triggerManualBackup = async function() {
+            const btn = document.querySelector("button[onclick*='triggerManualBackup']");
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generating Backup...';
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/sysadmin/backup`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                const result = await res.json();
+
+                if (result.status === 'SUCCESS') {
+                    alert(`Manual Database Backup Completed Successfully!\nFilename: ${result.filename || result.backup_file || 'bic_backup_' + Date.now() + '.json'}`);
+                } else {
+                    alert(`Backup Failed: ${result.message}`);
+                }
+            } catch (err) {
+                console.error('Manual backup error:', err);
+                alert('Network error while executing manual database backup.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-database mr-2"></i> Run Manual Backup';
+                }
+            }
+        };
+
+        window.syncLiveFeeds = async function() {
+            const btn = document.querySelector("button[onclick*='syncLiveFeeds']");
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Syncing...';
+
+            try {
+                // Refresh active tab data
+                const activeTab = document.getElementById('breadcrumbCurrent')?.innerText?.toLowerCase() || 'overview';
+                
+                // Trigger generic data reloads
+                if (typeof loadDashboardOverviewMetrics === 'function') await loadDashboardOverviewMetrics();
+                if (typeof loadAnalytics === 'function') await loadAnalytics();
+                
+                // Tab-specific refreshes
+                if (activeTab.includes('admissions') && typeof loadAdmissionsQueue === 'function') await loadAdmissionsQueue();
+                if (activeTab.includes('poi') && typeof loadCasesRegistry === 'function') await loadCasesRegistry();
+                if (activeTab.includes('deportation') && typeof loadDeportationsPipeline === 'function') await loadDeportationsPipeline();
+                if (activeTab.includes('compound') && typeof loadCompoundOccupancy === 'function') await loadCompoundOccupancy();
+
+                // Fetch active alerts endpoint
+                const alertRes = await fetch(`${API_BASE}/alerts/active`, { headers: getAuthHeaders() });
+                if (alertRes.ok) {
+                    const alertData = await alertRes.json();
+                    console.log('Live feed synced successfully. Active alerts:', alertData.count || 0);
+                }
+
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i> Sync Live Feeds';
+            } catch (err) {
+                console.error('Sync Live Feeds error:', err);
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i> Sync Live Feeds';
+            }
+        };
     </script>
 </body>
 </html>

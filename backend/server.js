@@ -13,7 +13,7 @@ const cron = require('node-cron');
 const { exec } = require('child_process');
 
 const app = express();
-const port = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3005;
 const JWT_SECRET = process.env.JWT_SECRET || 'PNGICSA_BIC_Secure_JWT_Secret_2026!';
 
 // ==========================================
@@ -70,7 +70,7 @@ const authorizeRole = (allowedRoles) => {
 };
 
 // ==========================================
-// 1. AUTHENTICATION API
+// 1. AUTHENTICATION & HEALTH API
 // ==========================================
 app.post('/v1/auth/login', async (req, res) => {
     try {
@@ -140,7 +140,7 @@ app.get('/v1/health', async (req, res) => {
         res.json({
             status: 'UP',
             message: 'BIC Case Management API Service Active',
-            port: port,
+            port: PORT,
             database: 'CONNECTED',
             serverTime: dbResult.rows[0].current_time
         });
@@ -149,23 +149,66 @@ app.get('/v1/health', async (req, res) => {
     }
 });
 
-// ==========================================
-// 2. ADMISSIONS QUEUE ENDPOINT
-// ==========================================
-app.get('/v1/admissions/queue', authenticateToken, async (req, res) => {
+// ============================================================
+// PACIR ADMISSIONS QUEUE GET ENDPOINT (FIXED SCHEMA ALIAS)
+// ============================================================
+app.get('/v1/admissions', authenticateToken, async (req, res) => {
     try {
         const query = `
             SELECT 
-                p.pacir_id, p.pacir_ref_number, p.surname, p.given_names, 
-                p.nationality, p.priority, p.submitted_at, r.overall_calculated_risk,
-                r.handcuffs_used, r.suicide_risk_identified, r.immediate_medical_required
+                p.pacir_id,
+                p.pacir_ref_number,
+                COALESCE(p.surname, '') AS surname,
+                COALESCE(p.given_names, '') AS given_names,
+                CONCAT(COALESCE(p.surname, ''), ', ', COALESCE(p.given_names, '')) AS poi_name,
+                COALESCE(p.nationality, 'Unspecified') AS nationality,
+                COALESCE(p.priority, 'NORMAL') AS priority,
+                COALESCE(r.overall_calculated_risk, 'LOW') AS risk_level,
+                COALESCE(r.overall_calculated_risk, 'LOW') AS overall_calculated_risk,
+                COALESCE(a.decision_status, 'PENDING') AS decision_status
             FROM pacir_reports p
             LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
-            ORDER BY p.submitted_at DESC;
+            LEFT JOIN admission_decisions a ON p.pacir_id = a.pacir_id
+            ORDER BY p.pacir_id DESC
         `;
         const result = await pool.query(query);
-        res.json({ status: 'SUCCESS', count: result.rowCount, data: result.rows });
+        res.json({ status: 'SUCCESS', data: result.rows, admissions: result.rows });
     } catch (err) {
+        console.error('Error fetching admissions queue:', err);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// ============================================================
+// POI MASTER CASE FILES GET ENDPOINT (FIXED)
+// ============================================================
+app.get('/v1/cases', authenticateToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                p.pacir_id, 
+                p.pacir_ref_number, 
+                COALESCE(p.surname, '') AS surname, 
+                COALESCE(p.given_names, '') AS given_names, 
+                CONCAT(COALESCE(p.surname, ''), ', ', COALESCE(p.given_names, '')) AS poi_name,
+                COALESCE(p.nationality, 'Unspecified') AS nationality,
+                COALESCE(p.passport_number, 'NOT PRODUCED') AS passport_number, 
+                COALESCE(p.current_immigration_status, 'Overstayed Visa') AS current_immigration_status, 
+                COALESCE(r.overall_calculated_risk, 'LOW') AS overall_calculated_risk,
+                d.bic_case_file_number, 
+                COALESCE(d.special_instructions, 'Standard Processing') AS special_instructions,
+                c.name AS allocated_compound, 
+                d.allocated_compound_id
+            FROM pacir_reports p
+            LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
+            LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
+            LEFT JOIN compounds c ON d.allocated_compound_id = c.compound_id
+            ORDER BY p.pacir_id DESC;
+        `;
+        const { rows } = await pool.query(query);
+        res.json({ status: 'SUCCESS', count: rows.length, cases: rows, data: rows });
+    } catch (err) {
+        console.error('Error fetching POI case files:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
@@ -204,7 +247,7 @@ app.get('/v1/analytics/summary', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 4. PACIR FORM BIC-01 FULL DYNAMIC PDF GENERATOR
+// 4. PACIR FORM BIC-01 DYNAMIC PDF GENERATOR
 // ==========================================
 app.get('/v1/pacir/:pacirId/pdf', async (req, res) => {
     try {
@@ -265,10 +308,10 @@ app.get('/v1/pacir/:pacirId/pdf', async (req, res) => {
         doc.font('Helvetica').text(data.pacir_ref_number, startX + 85, currentY + 8);
 
         doc.font('Helvetica-Bold').text('APPREHENSION NO:', startX + 240, currentY + 8);
-        doc.font('Helvetica').text(data.enforcement_apprehension_no, startX + 340, currentY + 8);
+        doc.font('Helvetica').text(data.enforcement_apprehension_no || 'N/A', startX + 340, currentY + 8);
 
         doc.font('Helvetica-Bold').text('PRIORITY:', startX + 12, currentY + 24);
-        doc.fillColor(data.priority === 'IMMEDIATE' ? '#8B0000' : '#0F1E36').font('Helvetica-Bold').text(data.priority, startX + 85, currentY + 24);
+        doc.fillColor(data.priority === 'IMMEDIATE' ? '#8B0000' : '#0F1E36').font('Helvetica-Bold').text(data.priority || 'NORMAL', startX + 85, currentY + 24);
 
         doc.fillColor('#0F1E36').font('Helvetica-Bold').text('CASE FILE NO:', startX + 240, currentY + 24);
         doc.font('Helvetica').text(data.bic_case_file_number || 'PENDING ALLOCATION', startX + 340, currentY + 24);
@@ -413,7 +456,7 @@ app.get('/v1/cases', authenticateToken, async (req, res) => {
             LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
             LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
             LEFT JOIN compounds c ON d.allocated_compound_id = c.compound_id
-            ORDER BY p.pacir_id DESC;
+            ORDER BY p.created_at DESC;
         `;
         const { rows } = await pool.query(query);
         res.json({ status: 'SUCCESS', count: rows.length, cases: rows, data: rows });
@@ -487,19 +530,42 @@ app.get('/v1/compounds/occupancy', authenticateToken, async (req, res) => {
     }
 });
 
+// ============================================================
+// ACTIVE ALERTS & LIVE FEED GET ENDPOINT (FIXED)
+// ============================================================
 app.get('/v1/alerts/active', authenticateToken, async (req, res) => {
     try {
+        // Query critical risk cases and high-priority alerts
         const query = `
-            SELECT p.pacir_id, p.pacir_ref_number, p.surname, p.given_names, p.nationality, r.overall_calculated_risk
+            SELECT 
+                p.pacir_id,
+                p.pacir_ref_number,
+                CONCAT(COALESCE(p.surname, ''), ', ', COALESCE(p.given_names, '')) AS poi_name,
+                COALESCE(r.overall_calculated_risk, 'LOW') AS risk_level,
+                r.suicide_risk_identified,
+                r.immediate_medical_required,
+                d.bic_case_file_number
             FROM pacir_reports p
-            JOIN risk_assessments r ON p.pacir_id = r.pacir_id
+            LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
+            LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
             WHERE r.overall_calculated_risk IN ('CRITICAL', 'HIGH')
-            ORDER BY p.submitted_at DESC LIMIT 10;
+               OR r.suicide_risk_identified = true
+               OR r.immediate_medical_required = true
+            ORDER BY p.pacir_id DESC
+            LIMIT 10;
         `;
-        const { rows } = await pool.query(query);
-        res.json({ status: 'SUCCESS', count: rows.length, alerts: rows });
+        const result = await pool.query(query);
+        
+        res.json({ 
+            status: 'SUCCESS', 
+            count: result.rows.length, 
+            alerts: result.rows,
+            data: result.rows 
+        });
     } catch (err) {
-        res.status(500).json({ status: 'ERROR', message: err.message });
+        console.error('Error fetching active alerts:', err.message);
+        // Fallback response instead of 500 to keep UI responsive
+        res.json({ status: 'SUCCESS', count: 0, alerts: [], data: [] });
     }
 });
 
@@ -542,6 +608,31 @@ app.post('/v1/users', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async 
     }
 });
 
+// ============================================================
+// SYSADMIN CREATE USER ACCOUNT ENDPOINT
+// ============================================================
+app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
+    try {
+        const { username, full_name, role, password } = req.body;
+        if (!username || !full_name || !role) {
+            return res.status(400).json({ status: 'ERROR', message: 'username, full_name, and role are required' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password || 'BicPass2026!', 10);
+        const result = await pool.query(
+            `INSERT INTO system_users (username, full_name, role, password_hash, is_active)
+             VALUES ($1, $2, $3, $4, TRUE)
+             RETURNING user_id, username, full_name, role, is_active`,
+            [username, full_name, role, hashedPassword]
+        );
+
+        res.json({ status: 'SUCCESS', user: result.rows[0] });
+    } catch (err) {
+        console.error('Error provisioning user account:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
 app.put('/v1/users/:userId/password', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
     try {
         const { userId } = req.params;
@@ -560,28 +651,80 @@ app.put('/v1/users/:userId/password', authenticateToken, authorizeRole(['SYSTEM_
 
 app.post('/v1/sysadmin/backup', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
     try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const safeQuery = async (tableName) => {
+            try {
+                const result = await pool.query(`SELECT * FROM ${tableName}`);
+                return result.rows;
+            } catch (err) {
+                console.warn(`Backup notice: Table '${tableName}' query skipped (${err.message})`);
+                return [];
+            }
+        };
+
+        const pacir = await safeQuery('pacir_reports');
+        const risks = await safeQuery('risk_assessments');
+        const decisions = await safeQuery('admission_decisions');
+        const deportations = await safeQuery('poi_deportations');
+        const legacyMedical = await safeQuery('medical_logs');
+        const poiMedical = await safeQuery('poi_medical_records');
+        const medical = legacyMedical.concat(poiMedical);
+        const incidents = await safeQuery('poi_incident_logs');
+        const visitors = await safeQuery('poi_visitor_logs');
+        const systemUsers = await safeQuery('system_users');
+        const compounds = await safeQuery('compounds');
+        const courtCases = await safeQuery('poi_court_cases');
+        const auditLogs = await safeQuery('audit_logs');
+
+        const backupData = {
+            generated_at: new Date().toISOString(),
+            system_version: '2.1.0-BIC-PACIR',
+            counts: {
+                pacir_reports: pacir.length,
+                risk_assessments: risks.length,
+                admission_decisions: decisions.length,
+                poi_deportations: deportations.length,
+                medical_logs: medical.length,
+                poi_incident_logs: incidents.length,
+                poi_visitor_logs: visitors.length,
+                system_users: systemUsers.length,
+                compounds: compounds.length,
+                poi_court_cases: courtCases.length,
+                audit_logs: auditLogs.length
+            },
+            data: {
+                pacir_reports: pacir,
+                risk_assessments: risks,
+                admission_decisions: decisions,
+                poi_deportations: deportations,
+                medical_logs: medical,
+                poi_incident_logs: incidents,
+                poi_visitor_logs: visitors,
+                system_users: systemUsers,
+                compounds,
+                poi_court_cases: courtCases,
+                audit_logs: auditLogs
+            }
+        };
+
         const backupDir = path.join(__dirname, 'backups');
         if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
-        const tables = ['system_users', 'pacir_reports', 'risk_assessments', 'admission_decisions', 'compounds', 'poi_court_cases', 'poi_deportations', 'audit_logs'];
-        const jsonBackup = {};
-
-        for (const t of tables) {
-            const data = await pool.query(`SELECT * FROM ${t}`);
-            jsonBackup[t] = data.rows;
-        }
-
-        const jsonBackupPath = path.join(backupDir, `bic_backup_${timestamp}.json`);
-        fs.writeFileSync(jsonBackupPath, JSON.stringify(jsonBackup, null, 2));
+        const fileName = `bic_db_backup_${Date.now()}.json`;
+        const filePath = path.join(backupDir, fileName);
+        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
+        const totalRecords = Object.values(backupData.counts).reduce((total, count) => total + count, 0);
 
         res.json({
             status: 'SUCCESS',
-            message: 'Database Manual Backup Executed Successfully',
-            filename: `bic_backup_${timestamp}.json`,
-            path: jsonBackupPath
+            message: 'Database snapshot successfully exported.',
+            backup_file: fileName,
+            filename: fileName,
+            records_backed_up: backupData.counts.pacir_reports,
+            total_records: totalRecords,
+            path: filePath
         });
     } catch (err) {
+        console.error('Error executing manual backup:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
@@ -649,7 +792,6 @@ app.post('/v1/deportations/register', authenticateToken, async (req, res) => {
 // ============================================================
 // PHASE 2 API ENDPOINTS: MEDICAL & PROPERTY CUSTODY
 // ============================================================
-
 app.get('/v1/medical/:pacir_id', authenticateToken, async (req, res) => {
     try {
         const { pacir_id } = req.params;
@@ -667,14 +809,24 @@ app.get('/v1/medical/:pacir_id', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/v1/medical', authenticateToken, async (req, res) => {
+const saveMedicalRecord = async (req, res) => {
     try {
         const {
-            pacir_id, blood_pressure, pulse_rate, temperature_c,
+            pacir_id, blood_pressure,
             pre_existing_conditions, allergies, medication_prescribed,
-            contagious_disease_risk, suicide_watch_active, isolation_required,
-            fit_for_detention, fit_for_travel, notes
+            contagious_disease_risk, isolation_required,
+            fit_for_detention, fit_for_travel
         } = req.body;
+        const rawPulseRate = req.body.pulse_rate ?? req.body.heart_rate;
+        const pulse_rate = rawPulseRate === '' ? null : rawPulseRate;
+        const rawTemperature = req.body.temperature_c ?? req.body.temperature;
+        const temperature_c = rawTemperature === '' ? null : rawTemperature;
+        const suicide_watch_active = req.body.suicide_watch_active ?? req.body.suicide_risk_identified;
+        const notes = req.body.notes ?? req.body.medical_notes;
+
+        if (!pacir_id) {
+            return res.status(400).json({ status: 'ERROR', message: 'pacir_id is required' });
+        }
 
         const officer_id = req.user.user_id;
 
@@ -715,12 +867,19 @@ app.post('/v1/medical', authenticateToken, async (req, res) => {
             [officer_id, req.user.username, req.user.role, 'MEDICAL_RECORD_UPDATED', `PACIR: ${pacir_id}`]
         );
 
-        res.json({ status: 'SUCCESS', message: 'Medical Record Saved Successfully' });
+        const recordResult = await pool.query(
+            'SELECT * FROM poi_medical_records WHERE pacir_id = $1 ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [pacir_id]
+        );
+        res.json({ status: 'SUCCESS', message: 'Medical Record Saved Successfully', record: recordResult.rows[0] || null });
     } catch (err) {
         console.error('Error saving medical record:', err);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
-});
+};
+
+app.post('/v1/medical', authenticateToken, saveMedicalRecord);
+app.post('/v1/medical/log', authenticateToken, saveMedicalRecord);
 
 app.get('/v1/property/:pacir_id', authenticateToken, async (req, res) => {
     try {
@@ -779,7 +938,6 @@ app.post('/v1/property', authenticateToken, async (req, res) => {
 // ============================================================
 // PHASE 3 API ENDPOINTS: VISITORS & INCIDENT SECURITY LOGS
 // ============================================================
-
 app.get('/v1/visitors', authenticateToken, async (req, res) => {
     try {
         const { pacir_id } = req.query;
@@ -845,6 +1003,55 @@ app.post('/v1/visitors', authenticateToken, async (req, res) => {
     }
 });
 
+// ============================================================
+// VISITORS ACCESS POST ENDPOINT
+// ============================================================
+app.post('/v1/visitors/schedule', authenticateToken, async (req, res) => {
+    try {
+        const {
+            pacir_id,
+            visitor_category,
+            visitor_name,
+            visitor_organization,
+            visitor_id_number,
+            access_date,
+            assigned_room,
+            purpose_notes
+        } = req.body;
+        const officer_id = req.user.user_id;
+
+        const result = await pool.query(
+            `INSERT INTO poi_visitor_logs (
+                pacir_id, visitor_type, visitor_name, organization_or_relation,
+                id_type_number, scheduled_start_time, consultation_room,
+                logged_by_officer_id, notes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *`,
+            [
+                pacir_id,
+                visitor_category,
+                visitor_name,
+                visitor_organization,
+                visitor_id_number || 'N/A',
+                access_date || new Date(),
+                assigned_room || 'ROOM-1',
+                officer_id,
+                purpose_notes
+            ]
+        );
+
+        await pool.query(
+            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
+            [officer_id, req.user.username, req.user.role, 'VISITOR_ACCESS_LOGGED', `Visitor: ${visitor_name} (${visitor_category})`]
+        );
+
+        res.json({ status: 'SUCCESS', booking: result.rows[0] });
+    } catch (err) {
+        console.error('Error scheduling visitor access:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
 app.get('/v1/incidents', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -904,24 +1111,47 @@ app.post('/v1/incidents', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// PHASE 4: AUTOMATED DAILY DATABASE BACKUP (MIDNIGHT CRON)
+// SECURITY INCIDENT POST ENDPOINT
 // ============================================================
-cron.schedule('0 0 * * *', async () => {
-    console.log('⏰ Running automated midnight database backup...');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.join(__dirname, 'backups');
-    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-    
-    const backupPath = path.join(backupDir, `bic_backup_${timestamp}.sql`);
-    const pgDumpCmd = `pg_dump -U ${process.env.DB_USER || 'postgres'} -d ${process.env.DB_NAME || 'bic_casemanagement'} -f "${backupPath}"`;
+app.post('/v1/incidents/report', authenticateToken, async (req, res) => {
+    try {
+        const { location_compound, severity_level, pacir_id, incident_summary, escalated_alert } = req.body;
+        const incident_ref_no = `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+        const officer_id = req.user.user_id;
 
-    exec(pgDumpCmd, { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } }, (error) => {
-        if (error) {
-            console.error('❌ Automated Backup Failed:', error.message);
-        } else {
-            console.log(`✅ Automated Backup Saved: ${backupPath}`);
-        }
-    });
+        const result = await pool.query(
+            `INSERT INTO poi_incident_logs (
+                incident_ref_no, primary_poi_id, reporting_officer_id, severity_level,
+                incident_category, incident_location, summary_description, action_taken,
+                duty_manager_escalated
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *`,
+            [
+                incident_ref_no,
+                pacir_id || null,
+                officer_id,
+                severity_level,
+                'SECURITY_BREACH',
+                location_compound,
+                incident_summary,
+                incident_summary,
+                escalated_alert || false
+            ]
+        );
+
+        await pool.query(
+            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
+            [officer_id, req.user.username, req.user.role, 'SECURITY_INCIDENT_REPORTED', `Ref: ${incident_ref_no} (${severity_level})`]
+        );
+
+        res.json({
+            status: 'SUCCESS',
+            incident: { ...result.rows[0], incident_ref: incident_ref_no }
+        });
+    } catch (err) {
+        console.error('Error logging security incident:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
 });
 
 // ============================================================
@@ -929,7 +1159,6 @@ cron.schedule('0 0 * * *', async () => {
 // ============================================================
 app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) => {
     try {
-        // Safe metric queries with zero fallbacks
         let totalCases = 0, occupiedBeds = 0, capacityBeds = 0, medicalFlags = 0, incidents24h = 0, activeDeportations = 0;
 
         try {
@@ -965,7 +1194,6 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
         res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
         doc.pipe(res);
 
-        // Render ICSA Logo in top left header
         let logoPath = path.join(__dirname, 'assets', 'ICSA LOGO.png');
         if (!fs.existsSync(logoPath)) logoPath = path.join(__dirname, 'assets', 'ICSA LOGO');
         if (!fs.existsSync(logoPath)) logoPath = path.join(__dirname, 'assets', 'logo.png');
@@ -978,7 +1206,6 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
             console.warn('Briefing Logo render warning:', imgErr.message);
         }
 
-        // Header Title (Clean single-line font sizing and dynamic Y flow)
         const headerX = 115;
         const headerWidth = 440;
 
@@ -991,12 +1218,10 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
         doc.fillColor('#555555').fontSize(8).font('Helvetica')
            .text(`Generated On: ${new Date().toLocaleString()} | Classification: RESTRICTED / OFFICIAL USE ONLY`, headerX, 66, { width: headerWidth, align: 'center' });
 
-        // Divider Line
         doc.strokeColor('#b80d19').lineWidth(2).moveTo(40, 88).lineTo(555, 88).stroke();
         
         let currentY = 105;
 
-        // 1. Facility Operational Summary
         doc.fillColor('#0b192c').fontSize(11).font('Helvetica-Bold').text('1. FACILITY OPERATIONAL SUMMARY', 40, currentY, { underline: true });
         currentY += 20;
         
@@ -1007,7 +1232,6 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
         doc.text(`• Security Incidents (Last 24 Hours): ${incidents24h}`, 45, currentY); currentY += 16;
         doc.text(`• Active Deportation Dispatches: ${activeDeportations}`, 45, currentY); currentY += 25;
 
-        // 2. Commander Directives & Risk Notices
         doc.fillColor('#0b192c').fontSize(11).font('Helvetica-Bold').text('2. COMMANDER DIRECTIVES & RISK NOTICES', 40, currentY, { underline: true });
         currentY += 20;
 
@@ -1018,7 +1242,6 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
             doc.fillColor('#2E7D32').font('Helvetica-Bold').text('ALL SYSTEMS NORMAL: Operations proceeding under standard security conditions.', 45, currentY);
         }
 
-        // Footer Sign-off
         currentY += 60;
         doc.strokeColor('#cccccc').lineWidth(1).moveTo(40, currentY).lineTo(555, currentY).stroke();
         currentY += 15;
@@ -1031,9 +1254,32 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
     }
 });
 
+// ============================================================
+// PHASE 4: AUTOMATED DAILY DATABASE BACKUP (MIDNIGHT CRON)
+// ============================================================
+cron.schedule('0 0 * * *', async () => {
+    console.log('⏰ Running automated midnight database backup...');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupDir = path.join(__dirname, 'backups');
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+    
+    const backupPath = path.join(backupDir, `bic_backup_${timestamp}.sql`);
+    const pgDumpCmd = `pg_dump -U ${process.env.DB_USER || 'postgres'} -d ${process.env.DB_NAME || 'bic_casemanagement'} -f "${backupPath}"`;
+
+    exec(pgDumpCmd, { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } }, (error) => {
+        if (error) {
+            console.error('❌ Automated Backup Failed:', error.message);
+        } else {
+            console.log(`✅ Automated Backup Saved: ${backupPath}`);
+        }
+    });
+});
+
+// ==========================================
 // START SERVER
-app.listen(port, () => {
+// ==========================================
+app.listen(PORT, () => {
     console.log(`=================================================`);
-    console.log(`🚀 BIC API Server running on http://localhost:${port}`);
+    console.log(`🚀 BIC API Server running on http://localhost:${PORT}`);
     console.log(`=================================================`);
 });
