@@ -59,15 +59,71 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// RBAC Guard Middleware
-const authorizeRole = (allowedRoles) => {
+// ============================================================
+// PHASE A: ROLE-BASED ACCESS CONTROL (RBAC) MIDDLEWARE
+// ============================================================
+const authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
-        if (!req.user || !allowedRoles.includes(req.user.role)) {
-            return res.status(403).json({ status: 'ERROR', message: 'Unauthorized action for assigned RBAC role' });
+        if (!req.user || !req.user.role) {
+            return res.status(401).json({ status: 'ERROR', message: 'Unauthorized: Missing user credentials' });
         }
-        next();
+
+        const role = req.user.role.toUpperCase();
+
+        if (role === 'SYSTEM_ADMIN' || role === 'COMMANDER' || role === 'DUTY_MANAGER' || allowedRoles.includes(role)) {
+            return next();
+        }
+
+        console.warn(`[RBAC DENIAL] User '${req.user.username}' (${role}) attempted unauthorized access to ${req.originalUrl}`);
+        return res.status(403).json({
+            status: 'ERROR',
+            message: `Access Denied: Role '${role}' does not have permission to access this module.`
+        });
     };
 };
+
+const requireRole = (allowedRoles = []) => authorizeRoles(...allowedRoles);
+const authorizeRole = requireRole;
+
+async function logAuditTrail(req, { actionType, targetModule = 'GENERAL', targetId = 'N/A', description = '', details = {} }, queryable = pool) {
+    const schemaResult = await queryable.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = 'audit_logs'`
+    );
+    const availableColumns = new Set(schemaResult.rows.map(row => row.column_name));
+    if (!availableColumns.has('action_type')) throw new Error('audit_logs.action_type column is unavailable.');
+
+    const operatorUsername = req.user?.username || 'SYSTEM';
+    const userRole = req.user?.role || 'OPERATOR';
+    const resourceAffected = `${targetModule}:${targetId}`;
+    const now = new Date();
+    const auditRecord = {
+        user_id: req.user?.user_id || null,
+        username: operatorUsername,
+        role: userRole,
+        operator_username: operatorUsername,
+        user_role: userRole,
+        action_type: actionType,
+        resource_affected: resourceAffected,
+        target_module: targetModule,
+        target_id: String(targetId ?? 'N/A'),
+        description,
+        ip_address: req.ip || '127.0.0.1',
+        details: JSON.stringify({ target_module: targetModule, target_id: String(targetId ?? 'N/A'), description, ...details }),
+        timestamp: now,
+        created_at: now
+    };
+    const columns = Object.keys(auditRecord).filter(column => availableColumns.has(column));
+    const values = columns.map(column => auditRecord[column]);
+    const placeholders = values.map((_, index) => `$${index + 1}`);
+
+    await queryable.query(
+        `INSERT INTO audit_logs (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`,
+        values
+    );
+}
 
 // ==========================================
 // 1. AUTHENTICATION & HEALTH API
@@ -77,60 +133,66 @@ app.post('/v1/auth/login', async (req, res) => {
         const { username, password } = req.body;
 
         if (!username || !password) {
-            return res.status(400).json({ status: 'ERROR', message: 'Username and password required' });
+            return res.status(400).json({ status: 'ERROR', message: 'Username and password are required.' });
         }
 
-        const userRes = await pool.query(
-            'SELECT user_id, username, full_name, email, role, password_hash, is_active FROM system_users WHERE username = $1',
-            [username]
+        const result = await pool.query(
+            'SELECT * FROM system_users WHERE LOWER(username) = LOWER($1)',
+            [username.trim()]
         );
 
-        if (userRes.rowCount === 0) {
-            return res.status(401).json({ status: 'ERROR', message: 'Invalid credentials' });
+        if (result.rows.length === 0) {
+            return res.status(401).json({ status: 'ERROR', message: 'Authentication Failed: Invalid credentials' });
         }
 
-        const user = userRes.rows[0];
+        const user = result.rows[0];
 
         if (!user.is_active) {
             return res.status(403).json({ status: 'ERROR', message: 'Account is deactivated. Contact ICT Service Desk.' });
         }
 
-        let isMatch = false;
-        if (user.password_hash && user.password_hash.startsWith('$2')) {
-            isMatch = await bcrypt.compare(password, user.password_hash);
+        let isValidPassword = false;
+        const storedPassword = user.password_hash;
+        if (typeof storedPassword === 'string' && storedPassword.startsWith('$2')) {
+            isValidPassword = await bcrypt.compare(password, storedPassword);
         } else {
-            if (password === user.password_hash || password === 'AdminPass2026!') {
-                isMatch = true;
-                const newHash = await bcrypt.hash(password, 10);
-                await pool.query('UPDATE system_users SET password_hash = $1 WHERE user_id = $2', [newHash, user.user_id]);
-            }
+            isValidPassword = typeof storedPassword === 'string' && password === storedPassword;
         }
 
-        if (!isMatch) {
-            return res.status(401).json({ status: 'ERROR', message: 'Invalid credentials' });
+        if (!isValidPassword) {
+            return res.status(401).json({ status: 'ERROR', message: 'Authentication Failed: Invalid credentials' });
+        }
+
+        if (typeof storedPassword === 'string' && !storedPassword.startsWith('$2')) {
+            const newHash = await bcrypt.hash(password, 10);
+            await pool.query('UPDATE system_users SET password_hash = $1 WHERE user_id = $2', [newHash, user.user_id]);
         }
 
         const token = jwt.sign(
-            { user_id: user.user_id, username: user.username, role: user.role, full_name: user.full_name },
+            {
+                user_id: user.user_id,
+                username: user.username,
+                role: user.role,
+                department: user.department
+            },
             JWT_SECRET,
             { expiresIn: '12h' }
         );
 
         res.json({
             status: 'SUCCESS',
-            message: 'Authentication successful',
             token: token,
             user: {
                 user_id: user.user_id,
                 username: user.username,
                 full_name: user.full_name,
-                email: user.email,
-                role: user.role
+                role: user.role,
+                department: user.department
             }
         });
     } catch (err) {
-        console.error('Login Error:', err.message);
-        res.status(500).json({ status: 'ERROR', message: err.message });
+        console.error('Login authentication error:', err.message);
+        res.status(500).json({ status: 'ERROR', message: 'Authentication system internal error.' });
     }
 });
 
@@ -152,7 +214,7 @@ app.get('/v1/health', async (req, res) => {
 // ============================================================
 // PACIR ADMISSIONS QUEUE GET ENDPOINT (FIXED SCHEMA ALIAS)
 // ============================================================
-app.get('/v1/admissions', authenticateToken, async (req, res) => {
+app.get('/v1/admissions', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -180,43 +242,38 @@ app.get('/v1/admissions', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// POI MASTER CASE FILES GET ENDPOINT (FIXED)
+// POI CASES FETCH ENDPOINT
 // ============================================================
-app.get('/v1/cases', authenticateToken, async (req, res) => {
+app.get('/v1/cases', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const query = `
-            SELECT 
-                p.pacir_id, 
-                p.pacir_ref_number, 
-                COALESCE(p.surname, '') AS surname, 
-                COALESCE(p.given_names, '') AS given_names, 
-                CONCAT(COALESCE(p.surname, ''), ', ', COALESCE(p.given_names, '')) AS poi_name,
-                COALESCE(p.nationality, 'Unspecified') AS nationality,
-                COALESCE(p.passport_number, 'NOT PRODUCED') AS passport_number, 
-                COALESCE(p.current_immigration_status, 'Overstayed Visa') AS current_immigration_status, 
-                COALESCE(r.overall_calculated_risk, 'LOW') AS overall_calculated_risk,
-                d.bic_case_file_number, 
-                COALESCE(d.special_instructions, 'Standard Processing') AS special_instructions,
-                c.name AS allocated_compound, 
-                d.allocated_compound_id
-            FROM pacir_reports p
-            LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
-            LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
-            LEFT JOIN compounds c ON d.allocated_compound_id = c.compound_id
-            ORDER BY p.pacir_id DESC;
+            SELECT
+                pacir_id,
+                COALESCE(pacir_ref_number, 'N/A') AS pacir_ref_number,
+                COALESCE(bic_case_file_number, 'BIC-2026-' || SUBSTRING(pacir_id::text FROM 1 FOR 4)) AS bic_case_file_number,
+                COALESCE(surname, '') AS surname,
+                COALESCE(given_names, '') AS given_names,
+                COALESCE(nationality, 'UNSPECIFIED') AS nationality,
+                COALESCE(overall_calculated_risk, 'LOW') AS overall_calculated_risk,
+                COALESCE(allocated_compound, 'UNALLOCATED') AS allocated_compound,
+                COALESCE(assigned_case_officer, 'UNASSIGNED') AS assigned_case_officer,
+                COALESCE(assigned_ops_officer, 'UNASSIGNED') AS assigned_ops_officer,
+                submitted_at AS created_at
+            FROM pacir_reports
+            ORDER BY submitted_at DESC;
         `;
         const { rows } = await pool.query(query);
         res.json({ status: 'SUCCESS', count: rows.length, cases: rows, data: rows });
     } catch (err) {
-        console.error('Error fetching POI case files:', err.message);
-        res.status(500).json({ status: 'ERROR', message: err.message });
+        console.error('Error fetching POI cases from DB:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message, cases: [] });
     }
 });
 
 // ==========================================
 // 3. EXECUTIVE ANALYTICS SUMMARY ENDPOINT
 // ==========================================
-app.get('/v1/analytics/summary', authenticateToken, async (req, res) => {
+app.get('/v1/analytics/summary', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const riskQuery = `SELECT overall_calculated_risk AS risk_level, COUNT(*) AS count FROM risk_assessments GROUP BY overall_calculated_risk;`;
         const nationalityQuery = `SELECT nationality, COUNT(*) AS count FROM pacir_reports GROUP BY nationality ORDER BY count DESC LIMIT 10;`;
@@ -400,7 +457,7 @@ app.get('/v1/pacir/:pacirId/pdf', async (req, res) => {
 // ==========================================
 // 5. INTAKE & CASE FILE ENDPOINTS
 // ==========================================
-app.post('/v1/pacir/intake', authenticateToken, async (req, res) => {
+app.post('/v1/pacir/intake', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -433,6 +490,13 @@ app.post('/v1/pacir/intake', authenticateToken, async (req, res) => {
             VALUES ($1, $2, $3, $4, $5);
         `, [pacirId, overallRisk, handcuffs_used, suicide_risk_identified, immediate_medical_required]);
 
+        await logAuditTrail(req, {
+            actionType: 'PACIR_INTAKE_REGISTERED',
+            targetModule: 'PACIR_REPORTS',
+            targetId: pacirId,
+            description: `Registered PACIR intake ${pacirRef}`
+        }, client);
+
         await client.query('COMMIT');
         res.status(201).json({ status: 'SUCCESS', message: 'PACIR Intake registered successfully', pacir_id: pacirId, pacir_ref_number: pacirRef });
     } catch (err) {
@@ -444,28 +508,7 @@ app.post('/v1/pacir/intake', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/v1/cases', authenticateToken, async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                p.pacir_id, p.pacir_ref_number, p.surname, p.given_names, p.nationality,
-                p.passport_number, p.current_immigration_status, COALESCE(r.overall_calculated_risk, 'LOW') AS overall_calculated_risk,
-                d.bic_case_file_number, COALESCE(d.special_instructions, 'Standard Processing') AS special_instructions,
-                c.name AS allocated_compound, d.allocated_compound_id
-            FROM pacir_reports p
-            LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
-            LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
-            LEFT JOIN compounds c ON d.allocated_compound_id = c.compound_id
-            ORDER BY p.created_at DESC;
-        `;
-        const { rows } = await pool.query(query);
-        res.json({ status: 'SUCCESS', count: rows.length, cases: rows, data: rows });
-    } catch (err) {
-        res.status(500).json({ status: 'ERROR', message: err.message });
-    }
-});
-
-app.post('/v1/cases/allocate', authenticateToken, async (req, res) => {
+app.post('/v1/cases/allocate', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'DUTY_MANAGER', 'COMMANDER'), async (req, res) => {
     try {
         const { pacir_id, compound_id, special_instructions } = req.body;
         const caseFileNo = `BIC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -487,6 +530,12 @@ app.post('/v1/cases/allocate', authenticateToken, async (req, res) => {
         const result = await pool.query(query, [pacir_id, caseFileNo, finalCompoundId, riskLevel, special_instructions || 'Standard Processing']);
 
         await pool.query(`UPDATE compounds SET current_occupancy = (SELECT COUNT(*)::int FROM admission_decisions WHERE allocated_compound_id = compounds.compound_id);`);
+        await logAuditTrail(req, {
+            actionType: 'CASE_COMPOUND_ALLOCATED',
+            targetModule: 'ADMISSION_DECISIONS',
+            targetId: pacir_id,
+            description: `Allocated case ${result.rows[0].bic_case_file_number}`
+        });
 
         res.json({ status: 'SUCCESS', message: 'BIC Case File & Compound Allocation Updated Successfully', bic_case_file_number: result.rows[0].bic_case_file_number });
     } catch (err) {
@@ -494,7 +543,7 @@ app.post('/v1/cases/allocate', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/v1/compounds/occupancy', authenticateToken, async (req, res) => {
+app.get('/v1/compounds/occupancy', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const query = `
             SELECT 
@@ -572,16 +621,69 @@ app.get('/v1/alerts/active', authenticateToken, async (req, res) => {
 // ==========================================
 // 6. SYSADMIN & BACKUP ENDPOINTS
 // ==========================================
-app.get('/v1/audit/logs', authenticateToken, async (req, res) => {
+app.get('/v1/audit/logs', authenticateToken, authorizeRoles('DUTY_MANAGER', 'COMMANDER', 'SYSTEM_ADMIN'), async (req, res) => {
     try {
-        const { rows } = await pool.query(`SELECT log_id, username, role, action_type, resource_affected, ip_address, details, created_at FROM audit_logs ORDER BY created_at DESC LIMIT 50;`);
+        const parsedLimit = Number.parseInt(req.query.limit, 10);
+        const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 500) : 50;
+        const schemaResult = await pool.query(
+            `SELECT column_name
+             FROM information_schema.columns
+             WHERE table_schema = current_schema()
+               AND table_name = 'audit_logs'`
+        );
+        const columns = new Set(schemaResult.rows.map(row => row.column_name));
+        if (columns.size === 0) throw new Error('Required audit_logs table is unavailable.');
+
+        const textField = (preferredColumns, fallback) => {
+            const expressions = preferredColumns
+                .filter(column => columns.has(column))
+                .map(column => `${column}::text`);
+            expressions.push(`'${fallback}'`);
+            return `COALESCE(${expressions.join(', ')})`;
+        };
+        const timestampExpr = columns.has('timestamp')
+            ? 'COALESCE("timestamp", NOW())'
+            : columns.has('created_at')
+                ? 'COALESCE(created_at, NOW())'
+                : 'NOW()';
+        const logIdExpr = columns.has('log_id') ? 'log_id' : 'NULL::bigint';
+        const operatorExpr = textField(['operator_username', 'username'], 'SYSTEM');
+        const roleExpr = textField(['user_role', 'role'], 'OPERATOR');
+        const actionExpr = textField(['action_type'], 'GENERAL');
+        const moduleExpr = textField(['target_module', 'resource_affected'], 'SYSTEM');
+        const targetIdExpr = textField(['target_id'], 'N/A');
+        const descriptionExpr = textField(['description', 'details'], 'No description provided');
+        const ipAddressExpr = textField(['ip_address'], '127.0.0.1');
+        const orderExpr = columns.has('log_id') ? 'log_id' : timestampExpr;
+
+        const query = `
+            SELECT
+                ${logIdExpr} AS log_id,
+                ${timestampExpr} AS timestamp,
+                ${operatorExpr} AS operator_username,
+                ${roleExpr} AS user_role,
+                ${actionExpr} AS action_type,
+                ${moduleExpr} AS target_module,
+                ${targetIdExpr} AS target_id,
+                ${descriptionExpr} AS description,
+                ${ipAddressExpr} AS ip_address,
+                ${timestampExpr} AS created_at,
+                ${operatorExpr} AS username,
+                ${roleExpr} AS role,
+                ${moduleExpr} AS resource_affected
+            FROM audit_logs
+            ORDER BY ${orderExpr} DESC
+            LIMIT $1;
+        `;
+        const { rows } = await pool.query(query, [limit]);
         res.json({ status: 'SUCCESS', count: rows.length, logs: rows });
     } catch (err) {
-        res.status(500).json({ status: 'ERROR', message: err.message });
+        console.error('Error fetching audit logs:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message, logs: [] });
     }
 });
 
-app.get('/v1/users', authenticateToken, async (req, res) => {
+app.get('/v1/users', authenticateToken, authorizeRoles('SYSTEM_ADMIN', 'COMMANDER'), async (req, res) => {
     try {
         const { rows } = await pool.query(`SELECT user_id, username, full_name, email, role, is_active, created_at FROM system_users ORDER BY created_at DESC;`);
         res.json({ status: 'SUCCESS', count: rows.length, users: rows });
@@ -590,7 +692,7 @@ app.get('/v1/users', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/v1/users', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
+app.post('/v1/users', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
     try {
         const { username, full_name, email, role, password } = req.body;
         const hashedPassword = await bcrypt.hash(password || 'AdminPass2026!', 10);
@@ -601,6 +703,12 @@ app.post('/v1/users', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async 
             RETURNING user_id, username, role;
         `;
         const result = await pool.query(query, [username, full_name, email, role, hashedPassword]);
+        await logAuditTrail(req, {
+            actionType: 'SYSTEM_USER_CREATED',
+            targetModule: 'SYSTEM_USERS',
+            targetId: result.rows[0].user_id,
+            description: `Created system user ${username}`
+        });
 
         res.status(201).json({ status: 'SUCCESS', message: 'User created successfully', user: result.rows[0] });
     } catch (err) {
@@ -611,7 +719,7 @@ app.post('/v1/users', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async 
 // ============================================================
 // SYSADMIN CREATE USER ACCOUNT ENDPOINT
 // ============================================================
-app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
+app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
     try {
         const { username, full_name, role, password } = req.body;
         if (!username || !full_name || !role) {
@@ -626,6 +734,13 @@ app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRole(['SYSTEM_
             [username, full_name, role, hashedPassword]
         );
 
+        await logAuditTrail(req, {
+            actionType: 'SYSTEM_USER_CREATED',
+            targetModule: 'SYSTEM_USERS',
+            targetId: result.rows[0].user_id,
+            description: `Provisioned system user ${username}`
+        });
+
         res.json({ status: 'SUCCESS', user: result.rows[0] });
     } catch (err) {
         console.error('Error provisioning user account:', err.message);
@@ -633,7 +748,7 @@ app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRole(['SYSTEM_
     }
 });
 
-app.put('/v1/users/:userId/password', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
+app.put('/v1/users/:userId/password', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
     try {
         const { userId } = req.params;
         const { new_password } = req.body;
@@ -643,13 +758,63 @@ app.put('/v1/users/:userId/password', authenticateToken, authorizeRole(['SYSTEM_
 
         if (result.rowCount === 0) return res.status(404).json({ status: 'ERROR', message: 'User not found' });
 
+        await logAuditTrail(req, {
+            actionType: 'PASSWORD_RESET',
+            targetModule: 'SYSTEM_USERS',
+            targetId: userId,
+            description: `Reset password for ${result.rows[0].username}`
+        });
+
         res.json({ status: 'SUCCESS', message: `Password reset successfully for operator: ${result.rows[0].username}` });
     } catch (err) {
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
 
-app.post('/v1/sysadmin/backup', authenticateToken, authorizeRole(['SYSTEM_ADMIN']), async (req, res) => {
+// ============================================================
+// SYSADMIN RESET USER PASSWORD POST ENDPOINT
+// ============================================================
+app.post('/v1/sysadmin/users/:userId/reset-password', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { new_password } = req.body;
+
+        if (!new_password) {
+            return res.status(400).json({ status: 'ERROR', message: 'New password is required.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(new_password, 10);
+        const result = await pool.query(
+            `UPDATE system_users
+             SET password_hash = $1
+             WHERE user_id = $2
+             RETURNING user_id, username`,
+            [hashedPassword, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'ERROR', message: 'User not found.' });
+        }
+
+        await logAuditTrail(req, {
+            actionType: 'PASSWORD_RESET',
+            targetModule: 'SYSTEM_USERS',
+            targetId: userId,
+            description: `Reset password for ${result.rows[0].username}`
+        });
+
+        res.json({
+            status: 'SUCCESS',
+            message: 'Password updated successfully.',
+            user: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Error resetting operator password:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+app.post('/v1/sysadmin/backup', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
     try {
         const safeQuery = async (tableName) => {
             try {
@@ -668,6 +833,7 @@ app.post('/v1/sysadmin/backup', authenticateToken, authorizeRole(['SYSTEM_ADMIN'
         const legacyMedical = await safeQuery('medical_logs');
         const poiMedical = await safeQuery('poi_medical_records');
         const medical = legacyMedical.concat(poiMedical);
+        const propertyLedger = await safeQuery('poi_property_ledger');
         const incidents = await safeQuery('poi_incident_logs');
         const visitors = await safeQuery('poi_visitor_logs');
         const systemUsers = await safeQuery('system_users');
@@ -684,6 +850,7 @@ app.post('/v1/sysadmin/backup', authenticateToken, authorizeRole(['SYSTEM_ADMIN'
                 admission_decisions: decisions.length,
                 poi_deportations: deportations.length,
                 medical_logs: medical.length,
+                poi_property_ledger: propertyLedger.length,
                 poi_incident_logs: incidents.length,
                 poi_visitor_logs: visitors.length,
                 system_users: systemUsers.length,
@@ -697,6 +864,7 @@ app.post('/v1/sysadmin/backup', authenticateToken, authorizeRole(['SYSTEM_ADMIN'
                 admission_decisions: decisions,
                 poi_deportations: deportations,
                 medical_logs: medical,
+                poi_property_ledger: propertyLedger,
                 poi_incident_logs: incidents,
                 poi_visitor_logs: visitors,
                 system_users: systemUsers,
@@ -713,6 +881,13 @@ app.post('/v1/sysadmin/backup', authenticateToken, authorizeRole(['SYSTEM_ADMIN'
         const filePath = path.join(backupDir, fileName);
         fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
         const totalRecords = Object.values(backupData.counts).reduce((total, count) => total + count, 0);
+        await logAuditTrail(req, {
+            actionType: 'MANUAL_BACKUP_CREATED',
+            targetModule: 'BACKUPS',
+            targetId: fileName,
+            description: `Created manual database backup ${fileName}`,
+            details: { total_records: totalRecords }
+        });
 
         res.json({
             status: 'SUCCESS',
@@ -749,13 +924,19 @@ app.post('/v1/cases/legal', authenticateToken, async (req, res) => {
             VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING case_id;
         `;
         const result = await pool.query(query, [pacir_id, court_name, proceeding_type, case_file_ref, legal_representation || 'N/A', injunction_granted || false, next_hearing_date || null, case_status || 'PENDING', notes || '']);
+        await logAuditTrail(req, {
+            actionType: 'LEGAL_RECORD_ADDED',
+            targetModule: 'POI_COURT_CASES',
+            targetId: result.rows[0].case_id,
+            description: `Added court record for PACIR ${pacir_id}`
+        });
         res.status(201).json({ status: 'SUCCESS', message: 'Court proceeding registered successfully', case_id: result.rows[0].case_id });
     } catch (err) {
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
 
-app.get('/v1/deportations', authenticateToken, async (req, res) => {
+app.get('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER'), async (req, res) => {
     try {
         const query = `
             SELECT d.*, p.surname, p.given_names, p.nationality, p.passport_number, c.bic_case_file_number
@@ -771,106 +952,210 @@ app.get('/v1/deportations', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/v1/deportations/register', authenticateToken, async (req, res) => {
+const saveDeportationRecord = async (req, res) => {
     try {
-        const { pacir_id, removal_type, cmo_signed_date, embassy_ctd_status, ctd_document_ref, destination_country, flight_number, departure_date, escort_team_details, property_released } = req.body;
-        const deportationRef = `DEP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+        const {
+            pacir_id,
+            deportation_order_ref,
+            removal_type,
+            removal_order_status,
+            cmo_signed_date,
+            embassy_ctd_status,
+            etc_issued,
+            ctd_document_ref,
+            transit_route,
+            flight_number,
+            airline,
+            departure_date,
+            destination_country,
+            escort_required,
+            lead_escort_officer,
+            secondary_escort_officer,
+            escort_team_details,
+            clearance_status,
+            property_released,
+            remarks
+        } = req.body;
+        if (!pacir_id || !destination_country) {
+            return res.status(400).json({ status: 'ERROR', message: 'pacir_id and destination_country are required.' });
+        }
+
+        const deportationRef = deportation_order_ref || `DEP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const escortDetails = escort_team_details || [lead_escort_officer, secondary_escort_officer].filter(Boolean).join('; ') || null;
+        const requiresEscort = escort_required ?? Boolean(lead_escort_officer || secondary_escort_officer || escortDetails);
+        const orderStatus = removal_order_status || 'PENDING';
 
         const query = `
-            INSERT INTO poi_deportations (pacir_id, deportation_order_ref, removal_type, cmo_signed_date, embassy_ctd_status, ctd_document_ref, destination_country, flight_number, departure_date, escort_team_details, property_released, logistics_status)
-            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'SCHEDULED')
-            RETURNING deportation_id, deportation_order_ref;
+            INSERT INTO poi_deportations (
+                pacir_id, deportation_order_ref, removal_type, removal_order_status,
+                cmo_signed_date, embassy_ctd_status, etc_issued, ctd_document_ref,
+                transit_route, flight_number, airline, departure_date, destination_country,
+                escort_required, lead_escort_officer, secondary_escort_officer,
+                escort_team_details, clearance_status, property_released, remarks, logistics_status
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                $14, $15, $16, $17, $18, $19, $20, $21
+            ) RETURNING *;
         `;
-        const result = await pool.query(query, [pacir_id, deportationRef, removal_type || 'DEPORTATION_ORDER', cmo_signed_date || null, embassy_ctd_status || 'PENDING', ctd_document_ref || null, destination_country, flight_number || null, departure_date || null, escort_team_details || 'Standard Escort', property_released || false]);
+        const result = await pool.query(query, [
+            pacir_id,
+            deportationRef,
+            removal_type || 'DEPORTATION_ORDER',
+            orderStatus,
+            cmo_signed_date || null,
+            embassy_ctd_status || clearance_status || 'PENDING',
+            etc_issued ?? Boolean(cmo_signed_date || ctd_document_ref),
+            ctd_document_ref || null,
+            transit_route || null,
+            flight_number || null,
+            airline || null,
+            departure_date || null,
+            destination_country,
+            requiresEscort,
+            lead_escort_officer || null,
+            secondary_escort_officer || null,
+            escortDetails,
+            clearance_status || embassy_ctd_status || 'PENDING',
+            property_released || false,
+            remarks || null,
+            orderStatus
+        ]);
+
+        await logAuditTrail(req, {
+            actionType: 'DEPORTATION_REGISTERED',
+            targetModule: 'POI_DEPORTATIONS',
+            targetId: result.rows[0].deportation_id,
+            description: `Registered removal order ${deportationRef} for PACIR ${pacir_id}`
+        });
 
         res.status(201).json({ status: 'SUCCESS', message: 'Deportation Order Registered Successfully', deportation: result.rows[0] });
     } catch (err) {
+        console.error('Error registering deportation:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
-});
+};
+
+app.post('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER'), saveDeportationRecord);
+app.post('/v1/deportations/register', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER'), saveDeportationRecord);
 
 // ============================================================
 // PHASE 2 API ENDPOINTS: MEDICAL & PROPERTY CUSTODY
 // ============================================================
-app.get('/v1/medical/:pacir_id', authenticateToken, async (req, res) => {
+app.get('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT m.*, p.pacir_ref_number, p.bic_case_file_number, p.surname, p.given_names,
+                    COALESCE(m.medical_officer, u.full_name, u.username, 'UNASSIGNED') AS officer_name
+             FROM poi_medical_records m
+             JOIN pacir_reports p ON p.pacir_id = m.pacir_id
+             LEFT JOIN system_users u ON u.user_id = m.medical_officer_id
+             ORDER BY m.screening_date DESC NULLS LAST, m.created_at DESC`
+        );
+        res.json({ status: 'SUCCESS', count: rows.length, records: rows });
+    } catch (err) {
+        console.error('Error fetching medical records:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message, records: [] });
+    }
+});
+
+app.get('/v1/medical/:pacir_id', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), async (req, res) => {
     try {
         const { pacir_id } = req.params;
         const result = await pool.query(
             `SELECT m.*, u.full_name as officer_name 
              FROM poi_medical_records m 
-             LEFT JOIN system_users u ON m.medical_officer_id = u.user_id 
+             LEFT JOIN system_users u ON m.medical_officer_id = u.user_id
              WHERE m.pacir_id = $1`,
             [pacir_id]
         );
-        res.json({ status: 'SUCCESS', record: result.rows[0] || null });
+        const records = result.rows.sort((a, b) => new Date(b.screening_date || b.created_at) - new Date(a.screening_date || a.created_at));
+        res.json({ status: 'SUCCESS', count: records.length, records, record: records[0] || null });
     } catch (err) {
         console.error('Error fetching medical record:', err);
-        res.status(500).json({ status: 'ERROR', message: err.message });
+        res.status(500).json({ status: 'ERROR', message: err.message, records: [] });
     }
 });
 
 const saveMedicalRecord = async (req, res) => {
     try {
-        const {
-            pacir_id, blood_pressure,
-            pre_existing_conditions, allergies, medication_prescribed,
-            contagious_disease_risk, isolation_required,
-            fit_for_detention, fit_for_travel
-        } = req.body;
+        const { pacir_id, blood_pressure, pre_existing_conditions, allergies, medication_prescribed, contagious_disease_risk, isolation_required } = req.body;
         const rawPulseRate = req.body.pulse_rate ?? req.body.heart_rate;
         const pulse_rate = rawPulseRate === '' ? null : rawPulseRate;
         const rawTemperature = req.body.temperature_c ?? req.body.temperature;
         const temperature_c = rawTemperature === '' ? null : rawTemperature;
-        const suicide_watch_active = req.body.suicide_watch_active ?? req.body.suicide_risk_identified;
-        const notes = req.body.notes ?? req.body.medical_notes;
+        const suicide_watch_active = req.body.suicide_watch_active ?? req.body.suicide_risk_identified ?? false;
+        const screening_date = req.body.screening_date || new Date();
+        const medical_officer_id = req.user.user_id;
+        const medical_officer = req.body.medical_officer || req.user.full_name || req.user.username;
+        const fit_for_custody = req.body.fit_for_custody ?? req.body.fit_for_detention ?? true;
+        const fit_to_travel = req.body.fit_to_travel ?? req.body.fit_for_travel ?? false;
+        const chronic_conditions = req.body.chronic_conditions ?? pre_existing_conditions ?? null;
+        const medications_prescribed = req.body.medications_prescribed ?? medication_prescribed ?? null;
+        const emergency_referral_required = req.body.emergency_referral_required ?? req.body.immediate_medical_required ?? false;
+        const clinical_notes = req.body.clinical_notes ?? req.body.medical_notes ?? req.body.notes ?? null;
+        const notes = clinical_notes;
+        const fit_for_detention = fit_for_custody;
+        const fit_for_travel = fit_to_travel;
 
         if (!pacir_id) {
             return res.status(400).json({ status: 'ERROR', message: 'pacir_id is required' });
         }
 
-        const officer_id = req.user.user_id;
+        const existing = await pool.query(
+            'SELECT medical_id FROM poi_medical_records WHERE pacir_id = $1 ORDER BY screening_date DESC NULLS LAST, created_at DESC NULLS LAST LIMIT 1',
+            [pacir_id]
+        );
+        let recordResult;
 
-        const checkExisting = await pool.query('SELECT medical_id FROM poi_medical_records WHERE pacir_id = $1', [pacir_id]);
-
-        if (checkExisting.rows.length > 0) {
-            await pool.query(
+        if (existing.rows.length > 0) {
+            recordResult = await pool.query(
                 `UPDATE poi_medical_records SET
-                    medical_officer_id = $1, blood_pressure = $2, pulse_rate = $3, temperature_c = $4,
-                    pre_existing_conditions = $5, allergies = $6, medication_prescribed = $7,
-                    contagious_disease_risk = $8, suicide_watch_active = $9, isolation_required = $10,
-                    fit_for_detention = $11, fit_for_travel = $12, notes = $13, updated_at = CURRENT_TIMESTAMP
-                 WHERE pacir_id = $14`,
+                    screening_date = $1, medical_officer_id = $2, medical_officer = $3,
+                    fit_for_custody = $4, fit_to_travel = $5, chronic_conditions = $6,
+                    medications_prescribed = $7, emergency_referral_required = $8, clinical_notes = $9,
+                    blood_pressure = $10, pulse_rate = $11, temperature_c = $12,
+                    pre_existing_conditions = $13, allergies = $14, medication_prescribed = $15,
+                    contagious_disease_risk = $16, suicide_watch_active = $17, isolation_required = $18,
+                    fit_for_detention = $19, fit_for_travel = $20, notes = $21, updated_at = CURRENT_TIMESTAMP
+                 WHERE medical_id = $22
+                 RETURNING *`,
                 [
-                    officer_id, blood_pressure, pulse_rate, temperature_c,
-                    pre_existing_conditions, allergies, medication_prescribed,
+                    screening_date, medical_officer_id, medical_officer,
+                    fit_for_custody, fit_to_travel, chronic_conditions, medications_prescribed,
+                    emergency_referral_required, clinical_notes, blood_pressure, pulse_rate,
+                    temperature_c, pre_existing_conditions, allergies, medications_prescribed,
                     contagious_disease_risk, suicide_watch_active, isolation_required,
-                    fit_for_detention, fit_for_travel, notes, pacir_id
+                    fit_for_detention, fit_for_travel, notes, existing.rows[0].medical_id
                 ]
             );
         } else {
-            await pool.query(
+            recordResult = await pool.query(
                 `INSERT INTO poi_medical_records (
-                    pacir_id, medical_officer_id, intake_screening_completed, blood_pressure, pulse_rate, temperature_c,
-                    pre_existing_conditions, allergies, medication_prescribed, contagious_disease_risk,
-                    suicide_watch_active, isolation_required, fit_for_detention, fit_for_travel, notes
-                ) VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                    pacir_id, screening_date, medical_officer_id, medical_officer,
+                    fit_for_custody, fit_to_travel, chronic_conditions, medications_prescribed,
+                    emergency_referral_required, clinical_notes, intake_screening_completed,
+                    blood_pressure, pulse_rate, temperature_c, pre_existing_conditions,
+                    allergies, medication_prescribed, contagious_disease_risk, suicide_watch_active,
+                    isolation_required, fit_for_detention, fit_for_travel, notes
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+                RETURNING *`,
                 [
-                    pacir_id, officer_id, blood_pressure, pulse_rate, temperature_c,
-                    pre_existing_conditions, allergies, medication_prescribed, contagious_disease_risk,
-                    suicide_watch_active, isolation_required, fit_for_detention, fit_for_travel, notes
+                    pacir_id, screening_date, medical_officer_id, medical_officer,
+                    fit_for_custody, fit_to_travel, chronic_conditions, medications_prescribed,
+                    emergency_referral_required, clinical_notes, blood_pressure, pulse_rate,
+                    temperature_c, pre_existing_conditions, allergies, medications_prescribed,
+                    contagious_disease_risk, suicide_watch_active, isolation_required,
+                    fit_for_detention, fit_for_travel, notes
                 ]
             );
         }
 
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
-            [officer_id, req.user.username, req.user.role, 'MEDICAL_RECORD_UPDATED', `PACIR: ${pacir_id}`]
-        );
-
-        const recordResult = await pool.query(
-            'SELECT * FROM poi_medical_records WHERE pacir_id = $1 ORDER BY updated_at DESC, created_at DESC LIMIT 1',
-            [pacir_id]
-        );
+        await logAuditTrail(req, {
+            actionType: 'MEDICAL_RECORD_UPDATED',
+            targetModule: 'POI_MEDICAL_RECORDS',
+            targetId: pacir_id,
+            description: `Medical record saved for PACIR ${pacir_id}`
+        });
         res.json({ status: 'SUCCESS', message: 'Medical Record Saved Successfully', record: recordResult.rows[0] || null });
     } catch (err) {
         console.error('Error saving medical record:', err);
@@ -878,59 +1163,128 @@ const saveMedicalRecord = async (req, res) => {
     }
 };
 
-app.post('/v1/medical', authenticateToken, saveMedicalRecord);
-app.post('/v1/medical/log', authenticateToken, saveMedicalRecord);
+app.post('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), saveMedicalRecord);
+app.post('/v1/medical/log', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), saveMedicalRecord);
 
-app.get('/v1/property/:pacir_id', authenticateToken, async (req, res) => {
+app.get('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER'), async (req, res) => {
     try {
-        const { pacir_id } = req.params;
-        const result = await pool.query(
-            `SELECT p.*, u.full_name as receiving_officer 
-             FROM poi_property_custody p 
-             LEFT JOIN system_users u ON p.receiving_officer_id = u.user_id 
-             WHERE p.pacir_id = $1 ORDER BY p.intake_timestamp DESC`,
-            [pacir_id]
+        const { rows } = await pool.query(
+            `SELECT l.*, p.pacir_ref_number, p.bic_case_file_number, p.surname, p.given_names
+             FROM poi_property_ledger l
+             JOIN pacir_reports p ON p.pacir_id = l.pacir_id
+             ORDER BY l.intake_date DESC, l.created_at DESC`
         );
-        res.json({ status: 'SUCCESS', items: result.rows });
+        res.json({ status: 'SUCCESS', count: rows.length, ledger: rows, items: rows });
     } catch (err) {
-        console.error('Error fetching property items:', err);
+        console.error('Error fetching property ledger:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message, ledger: [], items: [] });
+    }
+});
+
+app.get('/v1/property/:pacir_id', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER'), async (req, res) => {
+    try {
+        const { pacir_id: pacirId } = req.params;
+        const result = await pool.query(
+            'SELECT * FROM poi_property_ledger WHERE pacir_id = $1 ORDER BY intake_date DESC, created_at DESC',
+            [pacirId]
+        );
+        res.json({ status: 'SUCCESS', count: result.rows.length, ledger: result.rows, items: result.rows });
+    } catch (err) {
+        console.error('Error fetching property ledger:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message, ledger: [], items: [] });
+    }
+});
+
+app.post('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER'), async (req, res) => {
+    try {
+        const pacirId = req.body.pacir_id;
+        const itemCategory = req.body.item_category;
+        const description = req.body.description ?? req.body.item_description;
+        const serialNumberOrNotes = req.body.serial_number_or_notes ?? ([req.body.serial_number, req.body.notes].filter(Boolean).join(' | ') || null);
+        const currencyAmount = req.body.currency_amount ?? req.body.estimated_val_pgk ?? null;
+        const currencyCode = req.body.currency_code || (currencyAmount !== null ? 'PGK' : null);
+        const storageLockerRef = req.body.storage_locker_ref ?? req.body.storage_locker_number ?? null;
+        const custodyStatus = req.body.custody_status || 'IN_CUSTODY';
+        const handlingOfficer = req.body.handling_officer || req.user.full_name || req.user.username;
+        if (!pacirId || !itemCategory || !description) {
+            return res.status(400).json({ status: 'ERROR', message: 'pacir_id, item_category, and description are required.' });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO poi_property_ledger (
+                pacir_id, intake_date, item_category, description, serial_number_or_notes,
+                currency_amount, currency_code, storage_locker_ref, custody_status,
+                handling_officer, handling_officer_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING *`,
+            [
+                pacirId,
+                req.body.intake_date || new Date(),
+                itemCategory,
+                description,
+                serialNumberOrNotes,
+                currencyAmount,
+                currencyCode,
+                storageLockerRef,
+                custodyStatus,
+                handlingOfficer,
+                req.user.user_id
+            ]
+        );
+
+        await logAuditTrail(req, {
+            actionType: 'PROPERTY_ITEM_LOGGED',
+            targetModule: 'POI_PROPERTY_LEDGER',
+            targetId: result.rows[0].ledger_id,
+            description: `Property item registered for PACIR ${pacirId}`
+        });
+
+        res.json({
+            status: 'SUCCESS',
+            message: 'Property item registered into custody.',
+            item: result.rows[0],
+            ledger_entry: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Error logging property item:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
 
-app.post('/v1/property', authenticateToken, async (req, res) => {
+app.get('/v1/reports/bic-01/:pacirId', authenticateToken, authorizeRoles('INTAKE_OFFICER', 'CASE_OFFICER', 'SECURITY_OFFICER', 'MEDICAL_OFFICER', 'DEPORTATION_OFFICER'), async (req, res) => {
     try {
-        const {
-            pacir_id, item_category, item_description, serial_number,
-            estimated_val_pgk, storage_locker_number, notes
-        } = req.body;
-
-        const receiving_officer_id = req.user.user_id;
-        const bag_tag_qr_code = `BAG-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-        const result = await pool.query(
-            `INSERT INTO poi_property_custody (
-                pacir_id, receiving_officer_id, bag_tag_qr_code, item_category, item_description,
-                serial_number, estimated_val_pgk, storage_locker_number, notes
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING property_id, bag_tag_qr_code`,
-            [
-                pacir_id, receiving_officer_id, bag_tag_qr_code, item_category, item_description,
-                serial_number, estimated_val_pgk || 0, storage_locker_number, notes
-            ]
+        const { pacirId } = req.params;
+        const poiResult = await pool.query(
+            `SELECT p.*, COALESCE(r.overall_calculated_risk, p.overall_calculated_risk, 'LOW') AS overall_calculated_risk,
+                    d.bic_case_file_number, d.decision, d.decision_status, d.special_instructions,
+                    COALESCE(c.name, p.allocated_compound, 'UNALLOCATED') AS allocated_compound
+             FROM pacir_reports p
+             LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
+             LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
+             LEFT JOIN compounds c ON d.allocated_compound_id = c.compound_id
+             WHERE p.pacir_id = $1::uuid`,
+            [pacirId]
         );
+        if (poiResult.rows.length === 0) return res.status(404).json({ status: 'ERROR', message: 'POI record not found.' });
 
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
-            [receiving_officer_id, req.user.username, req.user.role, 'PROPERTY_ITEM_LOGGED', `Tag: ${bag_tag_qr_code}`]
-        );
+        const [medicalResult, deportationResult, propertyResult] = await Promise.all([
+            pool.query('SELECT * FROM poi_medical_records WHERE pacir_id = $1::uuid ORDER BY screening_date DESC, created_at DESC', [pacirId]),
+            pool.query('SELECT * FROM poi_deportations WHERE pacir_id = $1::uuid ORDER BY created_at DESC', [pacirId]),
+            pool.query('SELECT * FROM poi_property_ledger WHERE pacir_id = $1::uuid ORDER BY intake_date DESC', [pacirId])
+        ]);
 
         res.json({
             status: 'SUCCESS',
-            message: 'Property Item Registered into Custody',
-            item: result.rows[0]
+            report: {
+                generated_at: new Date().toISOString(),
+                poi: poiResult.rows[0],
+                medical_records: medicalResult.rows,
+                deportations: deportationResult.rows,
+                property_ledger: propertyResult.rows
+            }
         });
     } catch (err) {
-        console.error('Error logging property item:', err);
+        console.error('Error building aggregated BIC-01 report:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
@@ -991,10 +1345,12 @@ app.post('/v1/visitors', authenticateToken, async (req, res) => {
             ]
         );
 
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
-            [officer_id, req.user.username, req.user.role, 'VISITOR_ACCESS_LOGGED', `Visitor: ${visitor_name} (${visitor_type})`]
-        );
+        await logAuditTrail(req, {
+            actionType: 'VISITOR_ACCESS_LOGGED',
+            targetModule: 'POI_VISITOR_LOGS',
+            targetId: result.rows[0].visitor_id,
+            description: `Visitor: ${visitor_name} (${visitor_type})`
+        });
 
         res.json({ status: 'SUCCESS', message: 'Visitor access scheduled', visitor_id: result.rows[0].visitor_id });
     } catch (err) {
@@ -1040,10 +1396,12 @@ app.post('/v1/visitors/schedule', authenticateToken, async (req, res) => {
             ]
         );
 
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
-            [officer_id, req.user.username, req.user.role, 'VISITOR_ACCESS_LOGGED', `Visitor: ${visitor_name} (${visitor_category})`]
-        );
+        await logAuditTrail(req, {
+            actionType: 'VISITOR_ACCESS_LOGGED',
+            targetModule: 'POI_VISITOR_LOGS',
+            targetId: result.rows[0].visitor_id,
+            description: `Visitor: ${visitor_name} (${visitor_category})`
+        });
 
         res.json({ status: 'SUCCESS', booking: result.rows[0] });
     } catch (err) {
@@ -1052,7 +1410,7 @@ app.post('/v1/visitors/schedule', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/v1/incidents', authenticateToken, async (req, res) => {
+app.get('/v1/incidents', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'DUTY_MANAGER'), async (req, res) => {
     try {
         const result = await pool.query(
             `SELECT i.*, c.name AS compound_name, p.given_names, p.surname 
@@ -1068,7 +1426,7 @@ app.get('/v1/incidents', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/v1/incidents', authenticateToken, async (req, res) => {
+app.post('/v1/incidents', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'DUTY_MANAGER'), async (req, res) => {
     try {
         const {
             compound_id, primary_poi_id, severity_level, incident_category,
@@ -1094,10 +1452,12 @@ app.post('/v1/incidents', authenticateToken, async (req, res) => {
             ]
         );
 
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
-            [officer_id, req.user.username, req.user.role, 'SECURITY_INCIDENT_REPORTED', `Ref: ${incident_ref_no} (${severity_level})`]
-        );
+        await logAuditTrail(req, {
+            actionType: 'SECURITY_INCIDENT_REPORTED',
+            targetModule: 'POI_INCIDENT_LOGS',
+            targetId: result.rows[0].incident_id,
+            description: `Ref: ${incident_ref_no} (${severity_level})`
+        });
 
         res.json({
             status: 'SUCCESS',
@@ -1113,7 +1473,7 @@ app.post('/v1/incidents', authenticateToken, async (req, res) => {
 // ============================================================
 // SECURITY INCIDENT POST ENDPOINT
 // ============================================================
-app.post('/v1/incidents/report', authenticateToken, async (req, res) => {
+app.post('/v1/incidents/report', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'DUTY_MANAGER'), async (req, res) => {
     try {
         const { location_compound, severity_level, pacir_id, incident_summary, escalated_alert } = req.body;
         const incident_ref_no = `INC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1139,10 +1499,12 @@ app.post('/v1/incidents/report', authenticateToken, async (req, res) => {
             ]
         );
 
-        await pool.query(
-            `INSERT INTO audit_logs (user_id, username, role, action_type, resource_affected) VALUES ($1, $2, $3, $4, $5)`,
-            [officer_id, req.user.username, req.user.role, 'SECURITY_INCIDENT_REPORTED', `Ref: ${incident_ref_no} (${severity_level})`]
-        );
+        await logAuditTrail(req, {
+            actionType: 'SECURITY_INCIDENT_REPORTED',
+            targetModule: 'POI_INCIDENT_LOGS',
+            targetId: result.rows[0].incident_id,
+            description: `Ref: ${incident_ref_no} (${severity_level})`
+        });
 
         res.json({
             status: 'SUCCESS',
@@ -1150,6 +1512,97 @@ app.post('/v1/incidents/report', authenticateToken, async (req, res) => {
         });
     } catch (err) {
         console.error('Error logging security incident:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// ============================================================
+// PHASE B: POI OFFICER ASSIGNMENT & DUTY MANAGER OVERVIEW
+// ============================================================
+
+// 1. Assign/Reassign Case Officer
+app.post('/v1/cases/:pacirId/assign-officer', authenticateToken, authorizeRoles('DUTY_MANAGER', 'COMMANDER', 'SYSTEM_ADMIN'), async (req, res) => {
+    try {
+        const { pacirId } = req.params;
+        const { assigned_case_officer, assigned_ops_officer } = req.body;
+
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pacirId)) {
+            return res.status(400).json({ status: 'ERROR', message: 'A valid PACIR ID is required.' });
+        }
+        if (!assigned_case_officer && !assigned_ops_officer) {
+            return res.status(400).json({ status: 'ERROR', message: 'At least one officer assignment is required.' });
+        }
+
+        const result = await pool.query(
+            `UPDATE pacir_reports
+             SET assigned_case_officer = COALESCE($1, assigned_case_officer),
+                 assigned_ops_officer = COALESCE($2, assigned_ops_officer),
+                 assignment_updated_at = NOW()
+             WHERE pacir_id = $3::uuid
+             RETURNING pacir_id, pacir_ref_number, surname, given_names,
+                       assigned_case_officer, assigned_ops_officer`,
+            [assigned_case_officer || null, assigned_ops_officer || null, pacirId]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'ERROR', message: 'POI record not found.' });
+        }
+
+        const assignedNames = [
+            assigned_case_officer ? `case officer '${assigned_case_officer}'` : null,
+            assigned_ops_officer ? `operations officer '${assigned_ops_officer}'` : null
+        ].filter(Boolean).join(', ');
+        await logAuditTrail(req, {
+            actionType: 'OFFICER_REASSIGNMENT',
+            targetModule: 'PACIR_REPORTS',
+            targetId: pacirId,
+            description: `Assigned POI ${pacirId} to ${assignedNames}`
+        });
+
+        res.json({ status: 'SUCCESS', message: 'Officer assigned successfully.', record: result.rows[0] });
+    } catch (err) {
+        console.error('Error assigning officer:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+// 2. Fetch Duty Manager Facility & Staff Overview Summary
+app.get('/v1/duty-manager/facility-overview', authenticateToken, authorizeRoles('DUTY_MANAGER', 'COMMANDER', 'SYSTEM_ADMIN'), async (req, res) => {
+    try {
+        let onsiteStaff = [];
+        try {
+            const staffRes = await pool.query('SELECT * FROM onsite_staff_roster ORDER BY roster_id ASC');
+            onsiteStaff = staffRes.rows;
+        } catch (err) {
+            console.warn(`Duty Manager overview: Optional staff roster unavailable (${err.message})`);
+        }
+
+        const [workloadRes, pendingDecisionsRes] = await Promise.all([
+            pool.query(`
+                SELECT COALESCE(assigned_case_officer, 'UNASSIGNED') AS officer,
+                       COUNT(*)::int AS active_caseload
+                FROM pacir_reports
+                GROUP BY assigned_case_officer
+                ORDER BY active_caseload DESC
+            `),
+            pool.query(`
+                SELECT p.pacir_id, p.pacir_ref_number, p.surname, p.given_names, p.submitted_at AS created_at
+                FROM pacir_reports p
+                LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
+                WHERE d.decision_id IS NULL
+                   OR COALESCE(d.decision_status, 'PENDING') IN ('PENDING', 'DEFERRED')
+                ORDER BY p.submitted_at DESC
+            `)
+        ]);
+
+        res.json({
+            status: 'SUCCESS',
+            onsite_staff: onsiteStaff,
+            case_workload: workloadRes.rows,
+            pending_admissions_count: pendingDecisionsRes.rows.length,
+            pending_admissions: pendingDecisionsRes.rows
+        });
+    } catch (err) {
+        console.error('Error fetching Duty Manager overview:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });

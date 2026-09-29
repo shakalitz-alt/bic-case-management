@@ -13,11 +13,17 @@ const pool = new Pool({
 
 async function runMigration() {
     try {
-        const sqlPath = path.join(__dirname, 'phase3_schema.sql');
+        const availableMigrations = new Set(['phase2_schema.sql', 'phase3_schema.sql', 'phase4_schema.sql']);
+        const migrationFile = process.argv[2] || 'phase3_schema.sql';
+        if (!availableMigrations.has(migrationFile)) {
+            throw new Error(`Unknown migration '${migrationFile}'. Choose phase2_schema.sql, phase3_schema.sql, or phase4_schema.sql.`);
+        }
+
+        const sqlPath = path.join(__dirname, migrationFile);
         const sql = fs.readFileSync(sqlPath, 'utf8');
-        console.log('Running Phase 3 Schema Migration...');
+        console.log(`Running ${migrationFile}...`);
         await pool.query(sql);
-        console.log('✅ Phase 3 Tables Created Successfully!');
+        console.log(`✅ ${migrationFile} completed successfully.`);
     } catch (err) {
         console.error('❌ Migration Error:', err.message);
     } finally {

@@ -186,11 +186,15 @@
 
             <!-- HEADER -->
             <header class="bg-white/90 backdrop-blur-xs border-b border-slate-200 h-16 px-6 flex items-center justify-between sticky top-0 z-20">
-                <div class="flex items-center space-x-4 flex-1 max-w-lg">
-                    <div class="relative w-full">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" placeholder="Search POI name, PACIR ref, or passport number..." class="w-full pl-9 pr-4 py-2 bg-slate-100/90 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-red focus:bg-white text-slate-800 font-medium">
-                    </div>
+                <div class="relative flex-1 max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input 
+                        type="text" 
+                        id="globalSearchInput" 
+                        oninput="handleGlobalSearch(this.value)" 
+                        placeholder="Search POI name, PACIR ref, or passport number..." 
+                        class="w-full pl-9 pr-4 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-300 rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-red/50 transition shadow-inner"
+                    >
                 </div>
 
                 <div class="flex items-center space-x-4">
@@ -419,19 +423,20 @@
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
-                                <thead>
-                                    <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
-                                        <th class="py-3 px-4">Case File #</th>
-                                        <th class="py-3 px-4">PACIR Ref #</th>
-                                        <th class="py-3 px-4">POI Name</th>
-                                        <th class="py-3 px-4">Passport #</th>
-                                        <th class="py-3 px-4">Risk Level</th>
-                                        <th class="py-3 px-4">Compound Allocation</th>
-                                        <th class="py-3 px-4 text-right">Actions</th>
+                                <thead class="bg-slate-100 text-slate-700 uppercase text-[10px] tracking-wider font-bold">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">Case Ref #</th>
+                                        <th class="px-3 py-2 text-left">PACIR Ref</th>
+                                        <th class="px-3 py-2 text-left">POI Name</th>
+                                        <th class="px-3 py-2 text-left">Nationality</th>
+                                        <th class="px-3 py-2 text-left">Risk Level</th>
+                                        <th class="px-3 py-2 text-left">Compound Allocation</th>
+                                        <th class="px-3 py-2 text-left">Assigned Officer</th>
+                                        <th class="px-3 py-2 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="casesTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
-                                    <tr><td colspan="7" class="p-4 text-center text-slate-400">Loading master registry...</td></tr>
+                                    <tr><td colspan="8" class="p-4 text-center text-slate-400">Loading master registry...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1211,6 +1216,89 @@
         </div>
     </div>
 
+    <!-- RESET OPERATOR PASSWORD MODAL -->
+    <div id="resetPasswordModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-key text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">RESET OPERATOR PASSWORD</h3>
+                </div>
+                <button onclick="closeResetPasswordModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form onsubmit="submitPasswordReset(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="resetUserId">
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target Operator Username</label>
+                    <input type="text" id="resetUsername" readonly class="w-full px-3 py-2 bg-slate-100 border text-slate-600 rounded-lg font-bold">
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">New Password *</label>
+                    <input type="password" id="resetNewPass" required placeholder="Enter new strong password" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Confirm New Password *</label>
+                    <input type="password" id="resetConfirmPass" required placeholder="Re-enter new password" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red text-white font-bold rounded-lg shadow">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PHASE B: ASSIGN CASE OFFICER MODAL -->
+    <div id="assignOfficerModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-user-check text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">ASSIGN RESPONSIBLE CASE OFFICER</h3>
+                </div>
+                <button onclick="closeAssignOfficerModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form onsubmit="submitOfficerAssignment(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="assignPacirId">
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target POI Case File</label>
+                    <input type="text" id="assignPoiName" readonly class="w-full px-3 py-2 bg-slate-100 border text-slate-700 rounded-lg font-bold">
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Assigned Primary Case Officer *</label>
+                    <select id="assignCaseOfficerSelect" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="Maru, John">Maru, John (Case Officer)</option>
+                        <option value="Kila, Sarah">Kila, Sarah (Compliance Officer)</option>
+                        <option value="Bau, Stephen">Bau, Stephen (Case Officer)</option>
+                        <option value="UNASSIGNED">UNASSIGNED</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Assigned Operations / Escort Officer</label>
+                    <select id="assignOpsOfficerSelect" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="Bau, Stephen">Bau, Stephen (Security / Escort)</option>
+                        <option value="Kila, Sarah">Kila, Sarah (Escort Team)</option>
+                        <option value="UNASSIGNED">UNASSIGNED</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeAssignOfficerModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg shadow">Confirm Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- SCRIPT -->
     <script>
         const API_BASE = '/v1';
@@ -1250,7 +1338,7 @@
             const dropdownRole = document.getElementById('dropdownRole');
 
             if (headerUsername) headerUsername.innerText = user.full_name || user.username || '';
-            if (headerRoleBadge) headerRoleBadge.innerText = user.department || roleTitle;
+            if (headerRoleBadge) headerRoleBadge.innerText = roleTitle;
             if (headerUserAvatar) {
                 const initials = (user.full_name || user.username || 'SA').trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('');
                 headerUserAvatar.innerText = initials;
@@ -1258,6 +1346,38 @@
             if (dropdownUsername) dropdownUsername.innerText = user.username || user.full_name || '';
             if (dropdownRole) dropdownRole.innerText = roleTitle;
         }
+
+        const rolePermissionsByRole = {
+            'SYSTEM_ADMIN': ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'medical', 'property', 'visitors', 'incidents', 'sysadmin'],
+            'COMMANDER': ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'medical', 'property', 'visitors', 'incidents', 'sysadmin'],
+            'DUTY_MANAGER': ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'medical', 'property', 'visitors', 'incidents', 'sysadmin'],
+            'CASE_OFFICER': ['overview', 'pois', 'deportations', 'medical', 'visitors'],
+            'SECURITY_OFFICER': ['overview', 'admissions', 'compounds', 'property', 'incidents'],
+            'INTAKE_OFFICER': ['overview', 'admissions', 'compounds', 'property'],
+            'MEDICAL_OFFICER': ['overview', 'medical', 'pois']
+        };
+
+        const allNavigationTabs = ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'medical', 'property', 'visitors', 'incidents', 'sysadmin'];
+
+        window.applyRolePermissions = function(user) {
+            if (!user || !user.role) return;
+            const role = user.role.toUpperCase();
+            const allowedTabs = rolePermissionsByRole[role] || ['overview'];
+
+            updateUserDropdown(user);
+
+            allNavigationTabs.forEach(tabKey => {
+                const navItem = document.getElementById(`nav-${tabKey}`);
+                if (navItem) navItem.style.display = allowedTabs.includes(tabKey) ? 'flex' : 'none';
+            });
+
+            const adminNavSection = document.getElementById('adminNavSection');
+            if (adminNavSection) adminNavSection.style.display = allowedTabs.includes('sysadmin') ? 'block' : 'none';
+
+            const activeView = document.querySelector('[id^="view-"]:not(.hidden)');
+            const currentTab = activeView?.id.replace('view-', '') || 'overview';
+            if (!allowedTabs.includes(currentTab)) switchTab('overview');
+        };
 
         async function handleAuthLogin(event) {
             event.preventDefault();
@@ -1281,14 +1401,8 @@
                     document.getElementById('loginScreen').classList.add('hidden');
                     document.getElementById('appWorkspace').classList.remove('hidden');
 
-                    updateUserDropdown(result.user);
+                    applyRolePermissions(result.user);
                     document.getElementById('sidebarRoleLabel').innerText = result.user.role.replace('_', ' ');
-
-                    if (result.user.role === 'SYSTEM_ADMIN') {
-                        document.getElementById('adminNavSection').style.display = 'block';
-                    } else {
-                        document.getElementById('adminNavSection').style.display = 'none';
-                    }
 
                     switchTab('overview');
                     refreshAllData();
@@ -1309,8 +1423,54 @@
             document.getElementById('loginScreen').classList.remove('hidden');
         }
 
+        // ============================================================
+        // GLOBAL REAL-TIME SEARCH FILTER
+        // ============================================================
+        window.handleGlobalSearch = function(query) {
+            const searchTerm = query.toLowerCase().trim();
+            
+            // 1. Identify the currently active view tab
+            const activeView = document.querySelector('[id^="view-"]:not(.hidden)');
+            if (!activeView) return;
+
+            // 2. Locate any visible table rows inside the active view
+            const tableRows = activeView.querySelectorAll('tbody tr');
+
+            // 3. Filter rows based on matching text content
+            tableRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                if (!searchTerm || text.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // 4. Optional: If user is on 'overview', automatically switch to 'pois' tab when typing
+            const currentTab = document.getElementById('breadcrumbCurrent')?.innerText?.toLowerCase() || '';
+            if (searchTerm.length > 1 && currentTab.includes('overview')) {
+                switchTab('pois');
+                // Re-apply search after tab switch
+                setTimeout(() => window.handleGlobalSearch(query), 100);
+            }
+        };
+
         function switchTab(tabKey) {
             const views = ['overview', 'admissions', 'compounds', 'pois', 'deportations', 'sysadmin', 'medical', 'property', 'visitors', 'incidents'];
+            if (!views.includes(tabKey)) return;
+
+            let currentUser = null;
+            try {
+                currentUser = JSON.parse(localStorage.getItem('bic_active_user') || 'null');
+            } catch (err) {
+                currentUser = null;
+            }
+            const currentRole = currentUser?.role?.toUpperCase() || '';
+            const allowedTabs = rolePermissionsByRole[currentRole] || ['overview'];
+            if (!allowedTabs.includes(tabKey)) {
+                if (tabKey !== 'overview') switchTab('overview');
+                return;
+            }
             
             views.forEach(v => {
                 const el = document.getElementById(`view-${v}`);
@@ -1582,56 +1742,86 @@
             }
         }
 
-        async function loadCasesRegistry() {
+        window.loadCasesRegistry = async function() {
+            const tbody = document.querySelector('#view-pois tbody');
+            if (!tbody) return;
+
             try {
-                if (cachedCompoundsList.length === 0) {
-                    const compRes = await fetch(`${API_BASE}/compounds/occupancy`, { headers: getAuthHeaders() });
-                    const compData = await compRes.json();
-                    cachedCompoundsList = compData.compounds || [];
+                console.log('Fetching POI cases...');
+                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                console.log('Cases API Response:', data);
+
+                if (!res.ok) {
+                    throw new Error(data.message || `Failed to fetch POI case files (HTTP ${res.status}).`);
                 }
 
-                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
-                const result = await res.json();
-                if (result.cases) {
-                    cachedCasesList = result.cases;
-                    document.getElementById('casesTableBody').innerHTML = result.cases.map(c => `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || '<span class="text-amber-600 italic">PENDING</span>'}</td>
-                            <td class="py-3 px-4 font-mono">${c.pacir_ref_number}</td>
-                            <td class="py-3 px-4 font-bold">${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}</td>
-                            <td class="py-3 px-4 uppercase">${c.passport_number || 'N/A'}</td>
-                            <td class="py-3 px-4">
-                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${c.overall_calculated_risk === 'CRITICAL' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}">
+                let cases = [];
+                if (Array.isArray(data)) cases = data;
+                else if (Array.isArray(data.cases)) cases = data.cases;
+                else if (Array.isArray(data.data)) cases = data.data;
+                cachedCasesList = cases;
+
+                tbody.innerHTML = '';
+
+                if (cases.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 font-bold">No POI Case Files Found in Database</td></tr>`;
+                    return;
+                }
+
+                let currentRole = '';
+                try {
+                    currentRole = JSON.parse(localStorage.getItem('bic_active_user') || 'null')?.role?.toUpperCase() || '';
+                } catch (err) {
+                    currentRole = '';
+                }
+                const canAssignOfficer = ['DUTY_MANAGER', 'COMMANDER', 'SYSTEM_ADMIN'].includes(currentRole);
+                const inlineJsArg = value => JSON.stringify(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+                cases.forEach(c => {
+                    const fullName = `${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}`.trim();
+                    const officerName = c.assigned_case_officer || 'UNASSIGNED';
+                    const officerBadge = officerName === 'UNASSIGNED'
+                        ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Unassigned</span>`
+                        : `<span class="px-2 py-0.5 bg-slate-100 text-slate-800 rounded font-bold text-[10px]"><i class="fa-solid fa-user-check text-emerald-600 mr-1"></i> ${officerName}</span>`;
+                    const assignmentButton = canAssignOfficer ? `
+                        <button type="button" onclick="openAssignOfficerModal(${inlineJsArg(c.pacir_id)}, ${inlineJsArg(fullName)}, ${inlineJsArg(c.assigned_case_officer || '')})"
+                                class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded shadow-sm text-[11px] transition">
+                            <i class="fa-solid fa-user-gear mr-1"></i> Assign
+                        </button>
+                    ` : '';
+
+                    tbody.innerHTML += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition text-xs">
+                            <td class="px-3 py-2 font-black text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
+                            <td class="px-3 py-2 font-medium text-slate-600">${c.pacir_ref_number || 'N/A'}</td>
+                            <td class="px-3 py-2 font-bold text-slate-900">${fullName}</td>
+                            <td class="px-3 py-2 text-slate-600">${c.nationality || 'UNSPECIFIED'}</td>
+                            <td class="px-3 py-2">
+                                <span class="px-2 py-0.5 rounded font-black text-[10px] ${c.overall_calculated_risk === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}">
                                     ${c.overall_calculated_risk || 'LOW'}
                                 </span>
                             </td>
-                            <td class="py-3 px-4">
-                                <select onchange="updateCompoundAssignment('${c.pacir_id}', this.value)" class="px-2 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-bold focus:ring-2 focus:ring-brand-navy">
-                                    <option value="" ${!c.allocated_compound_id ? 'selected' : ''}>-- SELECT COMPOUND --</option>
-                                    ${cachedCompoundsList.map(cp => `
-                                        <option value="${cp.compound_id}" ${c.allocated_compound_id === cp.compound_id ? 'selected' : ''}>
-                                            ${cp.compound_name} (${cp.compound_type || 'General'})
-                                        </option>
-                                    `).join('')}
-                                </select>
-                            </td>
-                            <td class="py-3 px-4 text-right space-x-1.5">
-                                ${!c.bic_case_file_number ? `
-                                    <button onclick="allocateCaseNumber('${c.pacir_id}')" class="bg-brand-navy hover:bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm">
-                                        Allocate Case File #
-                                    </button>
-                                ` : ''}
-                                <button onclick="openLegalModal('${c.pacir_id}')" class="bg-indigo-700 hover:bg-indigo-800 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
+                            <td class="px-3 py-2 font-bold text-slate-700">${c.allocated_compound || 'Unallocated'}</td>
+                            <td class="px-3 py-2">${officerBadge}</td>
+                            <td class="px-3 py-2 text-right space-x-1 whitespace-nowrap">
+                                ${assignmentButton}
+                                <button type="button" onclick="openLegalModal(${inlineJsArg(c.pacir_id)})"
+                                        class="px-2 py-1 bg-brand-navy hover:bg-slate-800 text-white font-bold rounded shadow-sm text-[11px] transition">
                                     <i class="fa-solid fa-gavel mr-1"></i> Legal File
                                 </button>
-                                <a href="${API_BASE}/pacir/${c.pacir_id}/pdf" target="_blank" class="bg-brand-red hover:bg-brand-darkRed text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm inline-block">
+                                          <button type="button" onclick="generateBic01Pdf(${inlineJsArg(c.pacir_id)})"
+                                              class="px-2 py-1 bg-brand-red hover:bg-brand-darkRed text-white font-bold rounded shadow-sm text-[11px] transition inline-block">
                                     <i class="fa-solid fa-file-pdf mr-1"></i> Form BIC-01
-                                </a>
+                                          </button>
                             </td>
                         </tr>
-                    `).join('');
-                }
-            } catch (err) {}
+                    `;
+                });
+            } catch (err) {
+                console.error('Error loading POI case files:', err);
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 font-bold">Failed to load POI case files. See console for details.</td></tr>`;
+            }
         }
 
         async function updateCompoundAssignment(pacirId, compoundId) {
@@ -1749,7 +1939,7 @@
             } catch (err) {}
         }
 
-        async function loadDeportationsPipeline() {
+        window.loadDeportations = async function() {
             const tableBody = document.getElementById('deportationTableBody');
             if (!tableBody) return;
 
@@ -1778,7 +1968,7 @@
                     const destination = d.destination_country || 'Unspecified';
                     const ctdStatus = d.embassy_ctd_status || 'PENDING';
                     const flight = d.flight_number || 'TBD';
-                    const status = d.logistics_status || 'SCHEDULED';
+                    const status = d.clearance_status || d.removal_order_status || d.logistics_status || 'SCHEDULED';
 
                     return `
                         <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
@@ -1797,7 +1987,9 @@
                 console.error('Error loading deportations pipeline:', err);
                 tableBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500 font-semibold">Error rendering deportation records.</td></tr>`;
             }
-        }
+        };
+
+        const loadDeportationsPipeline = window.loadDeportations;
 
         async function loadSystemUsers() {
             try {
@@ -1839,47 +2031,84 @@
             } catch (err) {}
         }
 
-        async function loadMedicalRegistry() {
+        window.loadMedicalRecords = async function() {
+            const tableBody = document.getElementById('medicalTableBody');
+            if (!tableBody) return;
             try {
-                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE}/medical`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error(`Medical records request failed (HTTP ${res.status}).`);
                 const data = await res.json();
-                if (data.cases) {
-                    document.getElementById('medicalTableBody').innerHTML = data.cases.map(c => `
+                const records = Array.isArray(data.records) ? data.records : [];
+                if (!records.length) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No medical records found.</td></tr>';
+                    return;
+                }
+                tableBody.innerHTML = records.map(record => `
                         <tr class="hover:bg-slate-50">
-                            <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
-                            <td class="py-3 px-4 font-bold">${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}</td>
-                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">COMPLETED</span></td>
-                            <td class="py-3 px-4 font-bold ${c.suicide_risk_identified ? 'text-red-600' : 'text-slate-500'}">${c.suicide_risk_identified ? 'CRITICAL WATCH' : 'NORMAL'}</td>
-                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">APPROVED</span></td>
+                            <td class="py-3 px-4 font-bold text-brand-navy">${record.bic_case_file_number || 'PENDING'}</td>
+                            <td class="py-3 px-4 font-bold">${record.surname ? record.surname.toUpperCase() : ''}, ${record.given_names || ''}</td>
+                            <td class="py-3 px-4">${record.screening_date ? new Date(record.screening_date).toLocaleDateString() : 'Recorded'}</td>
+                            <td class="py-3 px-4 font-bold ${record.suicide_watch_active || record.emergency_referral_required ? 'text-red-600' : 'text-slate-500'}">${record.suicide_watch_active ? 'SUICIDE WATCH' : record.emergency_referral_required ? 'MEDICAL REFERRAL' : 'NORMAL'}</td>
+                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded ${record.fit_to_travel ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'} font-bold">${record.fit_to_travel ? 'CLEARED' : 'NOT CLEARED'}</span></td>
                             <td class="py-3 px-4 text-right">
-                                <button onclick="openMedicalModal('${c.pacir_id}')" class="bg-brand-navy text-white px-2.5 py-1 rounded font-bold text-[11px]">Update Health Log</button>
+                                <button onclick="openMedicalModal('${record.pacir_id}')" class="bg-brand-navy text-white px-2.5 py-1 rounded font-bold text-[11px]">Update Health Log</button>
                             </td>
                         </tr>
                     `).join('');
-                }
-            } catch (err) {}
-        }
+            } catch (err) {
+                console.error('Error loading medical records:', err);
+                tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Failed to load medical records.</td></tr>';
+            }
+        };
 
-        async function loadPropertyRegistry() {
+        const loadMedicalRegistry = window.loadMedicalRecords;
+
+        window.loadPropertyLedger = async function() {
+            const tableBody = document.getElementById('propertyTableBody');
+            if (!tableBody) return;
             try {
-                const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE}/property`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error(`Property ledger request failed (HTTP ${res.status}).`);
                 const data = await res.json();
-                if (data.cases) {
-                    document.getElementById('propertyTableBody').innerHTML = data.cases.map(c => `
+                const ledger = Array.isArray(data.ledger) ? data.ledger : Array.isArray(data.items) ? data.items : [];
+                if (!ledger.length) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No property ledger entries found.</td></tr>';
+                    return;
+                }
+                tableBody.innerHTML = ledger.map(item => `
                         <tr class="hover:bg-slate-50">
-                            <td class="py-3 px-4 font-bold text-brand-navy">${c.bic_case_file_number || 'PENDING'}</td>
-                            <td class="py-3 px-4 font-bold">${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}</td>
-                            <td class="py-3 px-4 font-mono text-brand-red font-bold">BAG-${c.pacir_id.substring(0,6)}</td>
-                            <td class="py-3 px-4 font-bold">ELECTRONICS / CASH</td>
-                            <td class="py-3 px-4 font-bold">LOCKER-A01</td>
+                            <td class="py-3 px-4 font-bold text-brand-navy">${item.bic_case_file_number || 'PENDING'}</td>
+                            <td class="py-3 px-4 font-bold">${item.surname ? item.surname.toUpperCase() : ''}, ${item.given_names || ''}</td>
+                            <td class="py-3 px-4 font-mono text-brand-red font-bold">${item.ledger_id || 'N/A'}</td>
+                            <td class="py-3 px-4 font-bold">${item.item_category || 'N/A'}</td>
+                            <td class="py-3 px-4 font-bold">${item.storage_locker_ref || 'N/A'}</td>
                             <td class="py-3 px-4 text-right">
-                                <button onclick="openPropertyModal('${c.pacir_id}')" class="bg-amber-600 text-white px-2.5 py-1 rounded font-bold text-[11px]">Log Item / Tag</button>
+                                <span class="px-2 py-1 rounded bg-slate-100 text-slate-700 font-bold text-[10px]">${item.custody_status || 'IN_CUSTODY'}</span>
                             </td>
                         </tr>
                     `).join('');
-                }
-            } catch (err) {}
-        }
+            } catch (err) {
+                console.error('Error loading property ledger:', err);
+                tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Failed to load property ledger.</td></tr>';
+            }
+        };
+
+        const loadPropertyRegistry = window.loadPropertyLedger;
+
+        window.generateBic01Pdf = async function(pacirId) {
+            const reportWindow = window.open('about:blank', '_blank');
+            try {
+                const res = await fetch(`${API_BASE}/pacir/${encodeURIComponent(pacirId)}/pdf`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error(`BIC-01 request failed (HTTP ${res.status}).`);
+                const pdfUrl = URL.createObjectURL(await res.blob());
+                if (reportWindow) reportWindow.location = pdfUrl;
+                else window.open(pdfUrl, '_blank', 'noopener');
+            } catch (err) {
+                if (reportWindow) reportWindow.close();
+                console.error('Error generating BIC-01 PDF:', err);
+                alert('Failed to generate Form BIC-01.');
+            }
+        };
 
         async function loadVisitorRegistry() {
             try {
@@ -1983,14 +2212,8 @@
                 if (user) {
                     document.getElementById('loginScreen').classList.add('hidden');
                     document.getElementById('appWorkspace').classList.remove('hidden');
-                    updateUserDropdown(user);
+                    applyRolePermissions(user);
                     document.getElementById('sidebarRoleLabel').innerText = user.role.replace('_', ' ');
-
-                    if (user.role === 'SYSTEM_ADMIN') {
-                        document.getElementById('adminNavSection').style.display = 'block';
-                    } else {
-                        document.getElementById('adminNavSection').style.display = 'none';
-                    }
 
                     switchTab('overview');
                     refreshAllData();
@@ -2396,6 +2619,106 @@
             } catch(err) {
                 console.error('Error creating user account:', err);
                 alert('Failed to provision operator account.');
+            }
+        };
+
+        // ============================================================
+        // RESET PASSWORD MODAL HANDLERS
+        // ============================================================
+        window.openResetPasswordModal = function(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUsername').value = username;
+            document.getElementById('resetNewPass').value = '';
+            document.getElementById('resetConfirmPass').value = '';
+
+            const modal = document.getElementById('resetPasswordModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.warn('resetPasswordModal element not found in DOM.');
+            }
+        };
+
+        window.closeResetPasswordModal = function() {
+            const modal = document.getElementById('resetPasswordModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitPasswordReset = async function(event) {
+            event.preventDefault();
+            const userId = document.getElementById('resetUserId')?.value;
+            const newPass = document.getElementById('resetNewPass')?.value;
+            const confirmPass = document.getElementById('resetConfirmPass')?.value;
+
+            if (newPass !== confirmPass) {
+                alert('Passwords do not match. Please verify and try again.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/users/${userId}/password`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ new_password: newPass })
+                });
+                const result = await res.json();
+
+                if (result.status === 'SUCCESS') {
+                    alert('Operator password reset successfully!');
+                    closeResetPasswordModal();
+                } else {
+                    alert(`Error resetting password: ${result.message}`);
+                }
+            } catch(err) {
+                console.error('Error in submitPasswordReset:', err);
+                alert('Network error while resetting password.');
+            }
+        };
+
+        // ============================================================
+        // PHASE B: OFFICER ASSIGNMENT MODAL HANDLERS
+        // ============================================================
+        window.openAssignOfficerModal = function(pacirId, poiName, currentOfficer) {
+            document.getElementById('assignPacirId').value = pacirId;
+            document.getElementById('assignPoiName').value = poiName || `POI ID: ${pacirId}`;
+            if (currentOfficer) document.getElementById('assignCaseOfficerSelect').value = currentOfficer;
+
+            const modal = document.getElementById('assignOfficerModal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeAssignOfficerModal = function() {
+            const modal = document.getElementById('assignOfficerModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.submitOfficerAssignment = async function(event) {
+            event.preventDefault();
+            const pacirId = document.getElementById('assignPacirId').value;
+            const caseOfficer = document.getElementById('assignCaseOfficerSelect').value;
+            const opsOfficer = document.getElementById('assignOpsOfficerSelect').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/cases/${pacirId}/assign-officer`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        assigned_case_officer: caseOfficer,
+                        assigned_ops_officer: opsOfficer
+                    })
+                });
+                const result = await res.json();
+
+                if (result.status === 'SUCCESS') {
+                    alert(`Case Officer assigned successfully!\nPOI: ${result.record.surname}, ${result.record.given_names}\nAssigned To: ${caseOfficer}`);
+                    closeAssignOfficerModal();
+                    if (typeof loadCasesRegistry === 'function') loadCasesRegistry();
+                } else {
+                    alert(`Error assigning officer: ${result.message}`);
+                }
+            } catch (err) {
+                console.error('Error submitting officer assignment:', err);
+                alert('Failed to save officer assignment.');
             }
         };
 
