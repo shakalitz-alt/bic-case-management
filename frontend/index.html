@@ -595,6 +595,10 @@
                                 <h3 class="text-sm font-bold text-slate-900 uppercase">POI Medical Intake & Travel Clearance Registry</h3>
                                 <p class="text-xs text-slate-500">Manage health screenings, suicide watch protocols, and Fit-to-Fly certifications.</p>
                             </div>
+                            <button onclick="openMedicalModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>New Health Screening</span>
+                            </button>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
@@ -624,6 +628,10 @@
                                 <h3 class="text-sm font-bold text-slate-900 uppercase">POI Personal Belongings & Property Custody</h3>
                                 <p class="text-xs text-slate-500">Log surrendered valuables, luggage locker assignments, and generate QR bag tags.</p>
                             </div>
+                            <button onclick="openAddPropertyModal()" class="bg-brand-navy hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>Add Property Item</span>
+                            </button>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
@@ -631,10 +639,10 @@
                                     <tr class="bg-slate-100/80 border-b font-bold text-slate-500 uppercase">
                                         <th class="py-3 px-4">Case File #</th>
                                         <th class="py-3 px-4">POI Name</th>
-                                        <th class="py-3 px-4">Bag Tag QR</th>
+                                        <th class="py-3 px-4">Tag / Item ID</th>
                                         <th class="py-3 px-4">Category</th>
                                         <th class="py-3 px-4">Locker #</th>
-                                        <th class="py-3 px-4 text-right">Actions</th>
+                                        <th class="py-3 px-4 text-right">Custody Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="propertyTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
@@ -826,17 +834,17 @@
 
     <!-- DEPORTATION / REMOVAL MODAL CONTAINER -->
     <div id="deportationModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
                 <div class="flex items-center space-x-2">
                     <i class="fa-solid fa-plane-departure text-brand-red"></i>
-                    <h3 class="font-bold text-sm tracking-wide">REGISTER NEW REMOVAL DISPATCH</h3>
+                    <h3 class="font-bold text-sm tracking-wide">REGISTER / UPDATE REMOVAL DISPATCH</h3>
                 </div>
                 <button type="button" onclick="closeDeportationModal()" class="text-slate-400 hover:text-white transition">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-            <form onsubmit="submitDeportationDispatch(event)" class="p-6 space-y-4 text-xs font-medium">
+            <form onsubmit="submitDeportationDispatch(event)" class="p-6 space-y-4 text-xs font-medium overflow-y-auto">
                 <div>
                     <label class="block text-slate-700 font-bold mb-1">Target POI Case File *</label>
                     <select id="depPacirId" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
@@ -853,14 +861,68 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">Destination Country *</label>
-                        <input type="text" id="depDestination" required placeholder="e.g. Philippines, Australia" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                        <label class="block text-slate-700 font-bold mb-1">Removal Order Status *</label>
+                        <select id="depRemovalOrderStatus" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="PENDING">PENDING MINISTERIAL REVIEW</option>
+                            <option value="APPROVED">APPROVED / SIGNED</option>
+                            <option value="ISSUED">ORDER ISSUED & SERVED</option>
+                            <option value="EN_ROUTE">EN ROUTE / IN TRANSIT</option>
+                            <option value="EXECUTED">EXECUTED / COMPLETED</option>
+                            <option value="CANCELLED">CANCELLED / STAYED</option>
+                        </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">Embassy CTD Status *</label>
-                        <select id="depCtdStatus" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <label class="block text-slate-700 font-bold mb-1">Destination Country *</label>
+                        <input type="text" id="depDestination" required placeholder="e.g. Philippines, Australia" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Clearance Status</label>
+                        <select id="depClearanceStatus" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="PENDING">PENDING FINAL CLEARANCE</option>
+                            <option value="CLEARED">CLEARED FOR DEPORTATION</option>
+                            <option value="IN_PROGRESS">ESCORT BRIEFING IN PROGRESS</option>
+                            <option value="FLIGHT_READY">FLIGHT READY / MANIFESTED</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Airline Carrier</label>
+                        <input type="text" id="depAirline" placeholder="e.g. Air Niugini, PNG Air, Qantas" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Flight Number</label>
+                        <input type="text" id="depFlight" placeholder="e.g. PX008 / QF58" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase font-mono">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Departure Date & Time</label>
+                        <input type="datetime-local" id="depDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div class="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-5">
+                        <input type="checkbox" id="depEtcIssued" class="w-4 h-4 text-brand-red rounded focus:ring-brand-red">
+                        <label for="depEtcIssued" class="text-slate-800 font-bold cursor-pointer text-xs">
+                            ETC Travel Doc Issued
+                        </label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Lead Escort Officer</label>
+                        <input type="text" id="depLeadEscort" placeholder="Officer Name / Badge" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Secondary Escort Officer</label>
+                        <input type="text" id="depSecondaryEscort" placeholder="Officer Name / Badge" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Embassy CTD Status</label>
+                        <select id="depCtdStatus" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
                             <option value="ISSUED">CTD ISSUED / VALID</option>
                             <option value="PENDING">PENDING EMBASSY ISSUANCE</option>
                             <option value="NOT_REQUIRED">NATIONAL PASSPORT HELD</option>
@@ -871,19 +933,9 @@
                         <input type="text" id="depCtdRef" placeholder="CTD-2026-99" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Flight / Route Number</label>
-                        <input type="text" id="depFlight" placeholder="e.g. PX008 / QF58" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase">
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Departure Date</label>
-                        <input type="date" id="depDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                </div>
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Escort Team Details</label>
-                    <input type="text" id="depEscort" placeholder="e.g. 2 x Compliance Officers" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    <label class="block text-slate-700 font-bold mb-1">Remarks & Logistics Notes</label>
+                    <textarea id="depRemarks" rows="2" placeholder="Operational briefing notes, transit route, transit visas, or security notices..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
                 </div>
                 <div class="flex justify-end space-x-3 pt-3 border-t">
                     <button type="button" onclick="closeDeportationModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
@@ -972,10 +1024,10 @@
                     <i class="fa-solid fa-heart-pulse text-brand-red"></i>
                     <h3 class="font-bold text-sm tracking-wide">UPDATE POI MEDICAL & HEALTH REGISTRY</h3>
                 </div>
-                <button onclick="closeMedicalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="closeMedicalModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             
-            <form onsubmit="submitMedicalRecord(event)" class="p-6 space-y-4 text-xs font-medium overflow-y-auto">
+            <form onsubmit="saveMedicalRecord(event)" class="p-6 space-y-4 text-xs font-medium overflow-y-auto">
                 <input type="hidden" id="medPacirId">
 
                 <div>
@@ -987,11 +1039,22 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-slate-700 font-bold mb-1">Screening Date & Time</label>
+                        <input type="datetime-local" id="medScreeningDate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Medical Officer Name</label>
+                        <input type="text" id="medMedicalOfficer" placeholder="Dr. / Officer Name" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
                         <label class="block text-slate-700 font-bold mb-1">Blood Pressure (mmHg)</label>
                         <input type="text" id="medBp" placeholder="e.g. 120/80" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
                     </div>
                     <div>
-                        <label class="block text-slate-700 font-bold mb-1">Heart Rate (BPM)</label>
+                        <label class="block text-slate-700 font-bold mb-1">Pulse / Heart Rate (BPM)</label>
                         <input type="number" id="medHeartRate" placeholder="e.g. 72" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
                     </div>
                 </div>
@@ -1010,21 +1073,145 @@
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-2 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                    <input type="checkbox" id="medFitForTravel" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                    <label for="medFitForTravel" class="text-emerald-900 font-bold cursor-pointer">
-                        Fit for Travel Clearance (Clear for Deportation Dispatch)
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex items-center space-x-2 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
+                        <input type="checkbox" id="medFitForCustody" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                        <label for="medFitForCustody" class="text-emerald-900 font-bold cursor-pointer text-xs">
+                            Fit for Custody & Detention
+                        </label>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-blue-50 p-2.5 rounded-lg border border-blue-200">
+                        <input type="checkbox" id="medFitToTravel" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <label for="medFitToTravel" class="text-blue-900 font-bold cursor-pointer text-xs">
+                            Fit to Travel (Deportation Cleared)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                    <input type="checkbox" id="medEmergencyReferral" class="w-4 h-4 text-brand-red rounded focus:ring-brand-red">
+                    <label for="medEmergencyReferral" class="text-rose-900 font-bold cursor-pointer text-xs">
+                        Emergency Referral Required (Hospital / Specialist Evacuation)
                     </label>
                 </div>
 
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Chronic Conditions / History</label>
+                        <textarea id="medChronicConditions" rows="2" placeholder="e.g. Asthma, Diabetes, Hypertension..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Medications Prescribed</label>
+                        <textarea id="medMedicationsPrescribed" rows="2" placeholder="e.g. Salbutamol inhaler 100mcg, Metformin 500mg..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Medical Assessment & Clinical Notes</label>
-                    <textarea id="medNotes" rows="3" placeholder="Enter clinical observations, prescribed medication, or isolation directives..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
+                    <label class="block text-slate-700 font-bold mb-1">Clinical Notes & Observations</label>
+                    <textarea id="medClinicalNotes" rows="2" placeholder="Enter clinical assessment, isolation directives, or general remarks..." class="w-full px-3 py-2 bg-slate-50 border rounded-lg"></textarea>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-3 border-t">
                     <button type="button" onclick="closeMedicalModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
                     <button type="submit" class="px-5 py-2 bg-brand-red text-white font-bold rounded-lg shadow">Save Medical Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PROPERTY CUSTODY LEDGER MODAL -->
+    <div id="propertyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-boxes-packing text-brand-red"></i>
+                    <h3 class="font-bold text-sm tracking-wide">SURRENDERED PROPERTY & CUSTODIAL VALUABLES</h3>
+                </div>
+                <button type="button" onclick="closeAddPropertyModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form onsubmit="savePropertyItem(event)" class="p-6 space-y-4 text-xs font-medium overflow-y-auto">
+                <input type="hidden" id="propPacirId">
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Target POI Case File *</label>
+                    <select id="propPacirSelect" onchange="document.getElementById('propPacirId').value=this.value" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="">-- SELECT POI CASE FILE --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Intake Date *</label>
+                        <input type="datetime-local" id="propIntakeDate" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Item Category *</label>
+                        <select id="propCategory" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="BAGGAGE">Baggage / Luggage</option>
+                            <option value="VALUABLES">Valuables / Jewelry</option>
+                            <option value="CURRENCY">Cash / Currency</option>
+                            <option value="ELECTRONICS">Mobile / Electronics</option>
+                            <option value="DOCUMENTS">Travel Documents / Identity</option>
+                            <option value="PERSONAL_EFFECTS">Personal Clothing / Effects</option>
+                            <option value="OTHER">Other Miscellaneous</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Item Description *</label>
+                    <input type="text" id="propDescription" required placeholder="e.g. Black Samsonite suitcase with clothing and toiletries" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Serial Number or Identifying Notes</label>
+                    <input type="text" id="propSerialNotes" placeholder="e.g. SN: iPhone 13 IMEI 35492... / Locked with combination" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Currency Amount (If Surrendered)</label>
+                        <input type="number" step="0.01" id="propCurrencyAmount" placeholder="e.g. 500.00" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Currency Code</label>
+                        <select id="propCurrencyCode" class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="PGK">PGK - PNG Kina</option>
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="AUD">AUD - Australian Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="PHP">PHP - Philippine Peso</option>
+                            <option value="IDR">IDR - Indonesian Rupiah</option>
+                            <option value="FJD">FJD - Fiji Dollar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Storage Locker / Safe Reference</label>
+                        <input type="text" id="propStorageLocker" placeholder="e.g. LCK-A-14 / SAFE-02" class="w-full px-3 py-2 bg-slate-50 border rounded-lg uppercase font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-bold mb-1">Custody Status *</label>
+                        <select id="propCustodyStatus" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                            <option value="IN_CUSTODY">IN CUSTODY (LOCKED)</option>
+                            <option value="RELEASED">RELEASED TO POI / ESCORT</option>
+                            <option value="TRANSFERRED">TRANSFERRED TO CMO</option>
+                            <option value="CONFISCATED">CONFISCATED / CONTRABAND</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Handling Officer</label>
+                    <input type="text" id="propHandlingOfficer" placeholder="Officer name / badge number" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeAddPropertyModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-navy hover:bg-slate-900 text-white font-bold rounded-lg shadow">Register Property Item</button>
                 </div>
             </form>
         </div>
@@ -2096,17 +2283,355 @@
         const loadPropertyRegistry = window.loadPropertyLedger;
 
         window.generateBic01Pdf = async function(pacirId) {
-            const reportWindow = window.open('about:blank', '_blank');
+            if (!pacirId) {
+                alert('A valid PACIR ID is required to generate Form BIC-01.');
+                return;
+            }
+
+            const reportWindow = window.open('', '_blank');
+            if (reportWindow) {
+                reportWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>Loading Form BIC-01...</title>
+                    <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#0f172a;}</style>
+                    </head><body><div style="text-align:center;"><h2>Generating Official Form BIC-01 Dossier...</h2><p>Aggregating identity, medical clearances, custody ledger, and deportation pipeline.</p></div></body></html>
+                `);
+            }
+
             try {
-                const res = await fetch(`${API_BASE}/pacir/${encodeURIComponent(pacirId)}/pdf`, { headers: getAuthHeaders() });
-                if (!res.ok) throw new Error(`BIC-01 request failed (HTTP ${res.status}).`);
-                const pdfUrl = URL.createObjectURL(await res.blob());
-                if (reportWindow) reportWindow.location = pdfUrl;
-                else window.open(pdfUrl, '_blank', 'noopener');
+                const res = await fetch(`${API_BASE}/reports/bic-01/${encodeURIComponent(pacirId)}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!res.ok) throw new Error(`Report aggregation failed with status ${res.status}`);
+                const payload = await res.json();
+                const data = payload.report || payload;
+                const poi = data.poi || data.poi_identity || {};
+                const med = data.latest_medical_status || (data.medical_records && data.medical_records[0]) || null;
+                const propItems = data.full_property_ledger || data.property_ledger || [];
+                const dep = data.current_deportation_status || data.deportation_removal_order || (data.deportations && data.deportations[0]) || null;
+
+                const fullName = `${poi.surname ? poi.surname.toUpperCase() : ''}, ${poi.given_names || ''}`.trim() || 'UNSPECIFIED';
+                const dobStr = poi.date_of_birth ? new Date(poi.date_of_birth).toLocaleDateString('en-GB') : 'N/A';
+                const screeningDateStr = med && med.screening_date ? new Date(med.screening_date).toLocaleDateString('en-GB') : 'Pending';
+                const departureDateStr = dep && dep.departure_date ? new Date(dep.departure_date).toLocaleDateString('en-GB') : 'TBD';
+
+                const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PNGICSA Form BIC-01: ${poi.pacir_ref_number || 'Report'}</title>
+    <style>
+        @page { size: A4 portrait; margin: 12mm 15mm; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; background: #ffffff; margin: 0; padding: 20px; font-size: 11px; line-height: 1.4; }
+        .no-print { background: #0b192c; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .btn { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 12px; border: none; transition: 0.15s; }
+        .btn-print { background: #b80d19; color: white; margin-right: 8px; }
+        .btn-print:hover { background: #8b0000; }
+        .btn-pdf { background: #2563eb; color: white; margin-right: 8px; text-decoration: none; display: inline-block; }
+        .btn-pdf:hover { background: #1d4ed8; }
+        .btn-close { background: #475569; color: white; }
+        .btn-close:hover { background: #334155; }
+        .header { text-align: center; border-bottom: 2px solid #b80d19; padding-bottom: 10px; margin-bottom: 14px; }
+        .header h1 { font-size: 14px; margin: 0 0 4px 0; color: #0b192c; font-weight: 800; letter-spacing: 0.5px; }
+        .header h2 { font-size: 12px; margin: 0 0 4px 0; color: #b80d19; font-weight: 800; }
+        .header .meta { font-size: 9px; color: #64748b; }
+        .badge-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; }
+        .badge-item { font-size: 10px; }
+        .badge-item strong { display: block; font-size: 9px; color: #475569; text-transform: uppercase; }
+        .badge-item span { font-weight: bold; color: #0b192c; }
+        .section { margin-bottom: 14px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; page-break-inside: avoid; }
+        .section-title { background: #0b192c; color: white; font-weight: 800; font-size: 10px; text-transform: uppercase; padding: 6px 10px; letter-spacing: 0.5px; }
+        .section-title.red { background: #8b0000; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; }
+        .field { font-size: 10.5px; }
+        .field-label { font-weight: bold; color: #475569; font-size: 9.5px; text-transform: uppercase; margin-bottom: 2px; }
+        .field-value { color: #0f172a; font-weight: 600; }
+        .status-pill { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9.5px; }
+        .status-ok { background: #dcfce7; color: #166534; }
+        .status-warn { background: #fef3c7; color: #92400e; }
+        .status-danger { background: #fee2e2; color: #991b1b; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background: #f1f5f9; color: #475569; font-weight: bold; text-align: left; padding: 6px 8px; border-bottom: 1px solid #cbd5e1; text-transform: uppercase; font-size: 9px; }
+        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+        .signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #cbd5e1; page-break-inside: avoid; }
+        .sig-block { text-align: center; }
+        .sig-line { border-bottom: 1px solid #94a3b8; height: 35px; margin-bottom: 6px; }
+        .sig-label { font-size: 9px; font-weight: bold; color: #475569; text-transform: uppercase; }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+            .section { border-color: #94a3b8; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <div>
+            <strong style="font-size:14px; letter-spacing:0.5px;">BOMANA IMMIGRATION CENTRE — CASE MANAGEMENT REPORT (BIC-01)</strong>
+            <div style="font-size:11px; opacity:0.8;">Certified Integrated Dossier & Verification Summary</div>
+        </div>
+        <div>
+            <button onclick="window.print()" class="btn btn-print">Print / Save as PDF</button>
+            <a href="${API_BASE}/pacir/${encodeURIComponent(pacirId)}/pdf" target="_blank" class="btn btn-pdf">Download Binary PDF</a>
+            <button onclick="window.close()" class="btn btn-close">Close</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>PAPUA NEW GUINEA IMMIGRATION & CITIZENSHIP SERVICE AUTHORITY</h1>
+        <h2>BOMANA IMMIGRATION CENTRE — PACIR ADMISSION & CASE DOSSIER (BIC-01)</h2>
+        <div class="meta">
+            Official Government Record • Classification: RESTRICTED / OFFICIAL USE ONLY • Generated on ${new Date().toLocaleString('en-GB')}
+        </div>
+    </div>
+
+    <div class="badge-bar">
+        <div class="badge-item">
+            <strong>PACIR Ref Number</strong>
+            <span>${poi.pacir_ref_number || 'N/A'}</span>
+        </div>
+        <div class="badge-item">
+            <strong>BIC Case File No</strong>
+            <span>${poi.bic_case_file_number || 'PENDING ALLOCATION'}</span>
+        </div>
+        <div class="badge-item">
+            <strong>Priority Status</strong>
+            <span style="color:${poi.priority === 'IMMEDIATE' ? '#b80d19' : '#0b192c'}; font-weight:800;">${poi.priority || 'NORMAL'}</span>
+        </div>
+        <div class="badge-item">
+            <strong>Overall Risk Profile</strong>
+            <span class="status-pill ${poi.overall_calculated_risk === 'CRITICAL' || poi.overall_calculated_risk === 'HIGH' ? 'status-danger' : 'status-ok'}">
+                ${poi.overall_calculated_risk || 'LOW'}
+            </span>
+        </div>
+    </div>
+
+    <!-- 1. POI IDENTITY DETAILS -->
+    <div class="section">
+        <div class="section-title">1. Person of Interest (POI) Identity & Intake Information</div>
+        <div class="grid-3">
+            <div class="field">
+                <div class="field-label">Full Name</div>
+                <div class="field-value">${fullName}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Date of Birth</div>
+                <div class="field-value">${dobStr}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Gender</div>
+                <div class="field-value">${poi.gender || 'UNSPECIFIED'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Nationality</div>
+                <div class="field-value">${poi.nationality || 'UNSPECIFIED'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Passport / Travel Doc #</div>
+                <div class="field-value">${poi.passport_number || 'NOT PRODUCED'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Allocated Compound</div>
+                <div class="field-value">${poi.allocated_compound ? poi.allocated_compound + ' COMPOUND' : 'UNALLOCATED'}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MEDICAL & HEALTH STATUS -->
+    <div class="section">
+        <div class="section-title">2. Medical & Health Clearance Status</div>
+        <div class="grid-3">
+            <div class="field">
+                <div class="field-label">Fit For Custody</div>
+                <div class="field-value">
+                    <span class="status-pill ${med && med.fit_for_custody ? 'status-ok' : 'status-danger'}">
+                        ${med ? (med.fit_for_custody ? 'YES - FIT FOR CUSTODY' : 'NO - UNFIT') : 'PENDING EVALUATION'}
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Fit To Travel / Deportation</div>
+                <div class="field-value">
+                    <span class="status-pill ${med && med.fit_to_travel ? 'status-ok' : 'status-warn'}">
+                        ${med ? (med.fit_to_travel ? 'CLEARED FOR TRAVEL' : 'NOT CLEARED') : 'NOT EVALUATED'}
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Emergency Referral</div>
+                <div class="field-value">
+                    <span class="status-pill ${med && med.emergency_referral_required ? 'status-danger' : 'status-ok'}">
+                        ${med ? (med.emergency_referral_required ? 'REQUIRED (IMMEDIATE)' : 'NONE REQUIRED') : 'NONE'}
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Screening Date</div>
+                <div class="field-value">${screeningDateStr}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Screening Medical Officer</div>
+                <div class="field-value">${med && med.medical_officer ? med.medical_officer : (med && med.officer_name ? med.officer_name : 'Staff Medical Officer')}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Suicide / Medical Watch</div>
+                <div class="field-value">
+                    <span class="status-pill ${med && med.suicide_watch_active ? 'status-danger' : 'status-ok'}">
+                        ${med && med.suicide_watch_active ? 'ACTIVE 15-MIN WATCH' : 'STANDARD'}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div style="padding: 0 10px 10px 10px;">
+            <div class="grid-2" style="padding:0; gap:8px;">
+                <div class="field">
+                    <div class="field-label">Chronic Conditions</div>
+                    <div class="field-value" style="font-size:10px;">${med && med.chronic_conditions ? med.chronic_conditions : 'None declared or observed.'}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Prescribed Medications</div>
+                    <div class="field-value" style="font-size:10px;">${med && med.medications_prescribed ? med.medications_prescribed : 'None prescribed.'}</div>
+                </div>
+            </div>
+            <div class="field" style="margin-top:6px;">
+                <div class="field-label">Clinical Observations & Directives</div>
+                <div class="field-value" style="font-size:10px; color:#334155;">${med && (med.clinical_notes || med.notes) ? (med.clinical_notes || med.notes) : 'Standard intake medical observations recorded. No acute contraindications reported.'}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. PROPERTY & VALUABLES LEDGER -->
+    <div class="section">
+        <div class="section-title">3. Surrendered Property, Valuables & Custody Ledger (${propItems.length} Registered Items)</div>
+        ${propItems.length === 0 ? `
+            <div style="padding: 12px; color: #64748b; font-style: italic;">No personal property or surrendered valuables currently recorded in custody ledger.</div>
+        ` : `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date Logged</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Serial / Notes</th>
+                        <th>Currency / Value</th>
+                        <th>Locker Ref</th>
+                        <th>Custody Status</th>
+                        <th>Handling Officer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${propItems.map(item => `
+                        <tr>
+                            <td>${item.intake_date ? new Date(item.intake_date).toLocaleDateString('en-GB') : 'N/A'}</td>
+                            <td><strong>${item.item_category || 'N/A'}</strong></td>
+                            <td>${item.description || 'N/A'}</td>
+                            <td>${item.serial_number_or_notes || 'N/A'}</td>
+                            <td>${item.currency_amount !== null && item.currency_amount !== undefined ? (item.currency_code || 'PGK') + ' ' + parseFloat(item.currency_amount).toFixed(2) : '-'}</td>
+                            <td><code>${item.storage_locker_ref || 'N/A'}</code></td>
+                            <td><span class="status-pill ${item.custody_status === 'IN_CUSTODY' ? 'status-ok' : 'status-warn'}">${item.custody_status || 'IN_CUSTODY'}</span></td>
+                            <td>${item.handling_officer || 'Officer'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `}
+    </div>
+
+    <!-- 4. DEPORTATION & LOGISTICS WORKFLOW -->
+    <div class="section">
+        <div class="section-title red">4. Deportation, Logistics & Removal Order Pipeline</div>
+        <div class="grid-3">
+            <div class="field">
+                <div class="field-label">Removal Order Status</div>
+                <div class="field-value">
+                    <span class="status-pill ${dep && (dep.removal_order_status === 'APPROVED' || dep.removal_order_status === 'EXECUTED') ? 'status-ok' : 'status-warn'}">
+                        ${dep ? (dep.removal_order_status || 'PENDING') : 'NO ACTIVE REMOVAL ORDER'}
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">ETC / Travel Document Issued</div>
+                <div class="field-value">
+                    <span class="status-pill ${dep && dep.etc_issued ? 'status-ok' : 'status-warn'}">
+                        ${dep ? (dep.etc_issued ? 'YES - ETC ISSUED' : 'PENDING EMBASSY') : 'NOT ISSUED'}
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Destination Country</div>
+                <div class="field-value" style="font-weight:800; color:#0b192c;">${dep && dep.destination_country ? dep.destination_country : 'Unspecified'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Airline & Flight #</div>
+                <div class="field-value">${dep ? ([dep.airline, dep.flight_number].filter(Boolean).join(' ') || 'TBD') : 'N/A'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Scheduled Departure Date</div>
+                <div class="field-value">${departureDateStr}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Operational Clearance Status</div>
+                <div class="field-value">
+                    <span class="status-pill ${dep && dep.clearance_status === 'CLEARED' ? 'status-ok' : 'status-warn'}">
+                        ${dep && dep.clearance_status ? dep.clearance_status : 'PENDING'}
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Lead Escort Officer</div>
+                <div class="field-value">${dep && dep.lead_escort_officer ? dep.lead_escort_officer : 'Unassigned'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Secondary Escort Officer</div>
+                <div class="field-value">${dep && dep.secondary_escort_officer ? dep.secondary_escort_officer : 'Unassigned'}</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Deportation Ref #</div>
+                <div class="field-value"><code>${dep && dep.deportation_order_ref ? dep.deportation_order_ref : 'N/A'}</code></div>
+            </div>
+        </div>
+        ${dep && dep.remarks ? `
+            <div style="padding: 0 10px 10px 10px;">
+                <div class="field">
+                    <div class="field-label">Escort Team & Removal Remarks</div>
+                    <div class="field-value" style="font-size:10px; color:#475569;">${dep.remarks}</div>
+                </div>
+            </div>
+        ` : ''}
+    </div>
+
+    <!-- 5. SIGNATURES & VERIFICATION -->
+    <div class="signatures">
+        <div class="sig-block">
+            <div class="sig-line"></div>
+            <div class="sig-label">Admitting Custodial Officer</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-line"></div>
+            <div class="sig-label">Medical Screening Officer</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-line"></div>
+            <div class="sig-label">Duty Manager / Commander</div>
+        </div>
+    </div>
+</body>
+</html>
+                `;
+
+                if (reportWindow) {
+                    reportWindow.document.open();
+                    reportWindow.document.write(htmlContent);
+                    reportWindow.document.close();
+                }
             } catch (err) {
                 if (reportWindow) reportWindow.close();
-                console.error('Error generating BIC-01 PDF:', err);
-                alert('Failed to generate Form BIC-01.');
+                console.error('Error generating Form BIC-01 report:', err);
+                alert('Failed to generate Form BIC-01 summary report: ' + err.message);
             }
         };
 
@@ -2300,6 +2825,13 @@
             const modal = document.getElementById('deportationModal');
             const select = document.getElementById('depPacirId');
 
+            const depDateInput = document.getElementById('depDate');
+            if (depDateInput && !depDateInput.value) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                depDateInput.value = now.toISOString().slice(0, 16);
+            }
+
             if (select) {
                 select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
                 try {
@@ -2331,19 +2863,31 @@
 
         window.submitDeportationDispatch = async function(event) {
             event.preventDefault();
+            const pacirId = document.getElementById('depPacirId')?.value;
+            if (!pacirId) {
+                alert('Please select a valid POI Case File.');
+                return;
+            }
+
             const payload = {
-                pacir_id: document.getElementById('depPacirId')?.value,
-                removal_type: document.getElementById('depRemovalType')?.value,
-                destination_country: document.getElementById('depDestination')?.value,
-                embassy_ctd_status: document.getElementById('depCtdStatus')?.value,
-                ctd_document_ref: document.getElementById('depCtdRef')?.value,
-                flight_number: document.getElementById('depFlight')?.value,
+                pacir_id: pacirId,
+                removal_order_status: document.getElementById('depRemovalOrderStatus')?.value || 'PENDING',
+                etc_issued: document.getElementById('depEtcIssued')?.checked || false,
+                flight_number: document.getElementById('depFlight')?.value || null,
+                airline: document.getElementById('depAirline')?.value || null,
                 departure_date: document.getElementById('depDate')?.value || null,
-                escort_team_details: document.getElementById('depEscort')?.value
+                destination_country: document.getElementById('depDestination')?.value || 'Unspecified',
+                lead_escort_officer: document.getElementById('depLeadEscort')?.value || null,
+                secondary_escort_officer: document.getElementById('depSecondaryEscort')?.value || null,
+                clearance_status: document.getElementById('depClearanceStatus')?.value || 'PENDING',
+                remarks: document.getElementById('depRemarks')?.value || null,
+                removal_type: document.getElementById('depRemovalType')?.value || 'DEPORTATION_ORDER',
+                embassy_ctd_status: document.getElementById('depCtdStatus')?.value || 'PENDING',
+                ctd_document_ref: document.getElementById('depCtdRef')?.value || null
             };
 
             try {
-                const res = await fetch(`${API_BASE}/deportations/register`, {
+                const res = await fetch(`${API_BASE}/deportations`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify(payload)
@@ -2352,7 +2896,7 @@
                 if (result.status === 'SUCCESS') {
                     alert(`Deportation Dispatch Registered!\nRef: ${result.deportation?.deportation_order_ref || 'OK'}`);
                     closeDeportationModal();
-                    loadDeportationsPipeline();
+                    if (typeof window.loadDeportations === 'function') window.loadDeportations();
                 } else {
                     alert(`Error registering dispatch: ${result.message}`);
                 }
@@ -2362,14 +2906,23 @@
             }
         };
 
+        window.saveDeportationRecord = window.submitDeportationDispatch;
+
         // ============================================================
-        // MEDICAL MODAL HANDLERS
+        // MEDICAL & HEALTH REGISTRY MODAL HANDLERS
         // ============================================================
         window.openMedicalModal = async function(pacirId = null) {
             const modal = document.getElementById('medicalModal');
             const select = document.getElementById('medPacirSelect');
             const pacirInput = document.getElementById('medPacirId');
             if (pacirInput) pacirInput.value = pacirId || '';
+
+            const dateInput = document.getElementById('medScreeningDate');
+            if (dateInput && !dateInput.value) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                dateInput.value = now.toISOString().slice(0, 16);
+            }
 
             if (select) {
                 select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
@@ -2384,6 +2937,7 @@
                         const isSelected = pacirId && c.pacir_id === pacirId ? 'selected' : '';
                         select.innerHTML += `<option value="${c.pacir_id}" ${isSelected}>${fullName} (${c.bic_case_file_number || 'PENDING'})</option>`;
                     });
+                    if (pacirId) select.value = pacirId;
                 } catch (e) {
                     console.error('Error populating medical POI select:', e);
                 }
@@ -2397,7 +2951,7 @@
             if (modal) modal.classList.add('hidden');
         };
 
-        window.submitMedicalRecord = async function(event) {
+        window.saveMedicalRecord = async function(event) {
             event.preventDefault();
             const pacirId = document.getElementById('medPacirId')?.value || document.getElementById('medPacirSelect')?.value;
 
@@ -2406,14 +2960,25 @@
                 return;
             }
 
+            const rawBp = document.getElementById('medBp')?.value?.trim() || null;
+            const rawPulse = document.getElementById('medHeartRate')?.value?.trim();
+            const rawTemp = document.getElementById('medTemp')?.value?.trim();
+
             const payload = {
                 pacir_id: pacirId,
-                blood_pressure: document.getElementById('medBp')?.value,
-                pulse_rate: document.getElementById('medHeartRate')?.value,
-                temperature_c: document.getElementById('medTemp')?.value,
-                suicide_watch_active: document.getElementById('medSuicideWatch')?.value === 'true',
-                fit_for_travel: document.getElementById('medFitForTravel')?.checked,
-                notes: document.getElementById('medNotes')?.value
+                screening_date: document.getElementById('medScreeningDate')?.value || new Date().toISOString(),
+                medical_officer: document.getElementById('medMedicalOfficer')?.value || 'Medical Officer',
+                fit_for_custody: document.getElementById('medFitForCustody')?.checked ?? true,
+                fit_to_travel: document.getElementById('medFitToTravel')?.checked ?? false,
+                chronic_conditions: document.getElementById('medChronicConditions')?.value || '',
+                medications_prescribed: document.getElementById('medMedicationsPrescribed')?.value || '',
+                emergency_referral_required: document.getElementById('medEmergencyReferral')?.checked ?? false,
+                clinical_notes: document.getElementById('medClinicalNotes')?.value || '',
+                // Clinical Vitals
+                blood_pressure: rawBp,
+                pulse_rate: rawPulse ? parseInt(rawPulse, 10) : null,
+                temperature_c: rawTemp ? parseFloat(rawTemp) : null,
+                suicide_watch_active: document.getElementById('medSuicideWatch')?.value === 'true'
             };
 
             try {
@@ -2426,7 +2991,7 @@
                 if (result.status === 'SUCCESS') {
                     alert('Medical & Health Record Saved Successfully!');
                     closeMedicalModal();
-                    if (typeof loadMedicalRegistry === 'function') loadMedicalRegistry();
+                    if (typeof window.loadMedicalRecords === 'function') window.loadMedicalRecords();
                 } else {
                     alert(`Error: ${result.message}`);
                 }
@@ -2435,6 +3000,97 @@
                 alert('Failed to save medical log.');
             }
         };
+
+        window.submitMedicalRecord = window.saveMedicalRecord;
+
+        // ============================================================
+        // PROPERTY, VALUABLES & CUSTODY LEDGER HANDLERS
+        // ============================================================
+        window.openAddPropertyModal = async function(pacirId = null) {
+            const modal = document.getElementById('propertyModal');
+            const select = document.getElementById('propPacirSelect');
+            const pacirInput = document.getElementById('propPacirId');
+            if (pacirInput) pacirInput.value = pacirId || '';
+
+            const intakeInput = document.getElementById('propIntakeDate');
+            if (intakeInput && !intakeInput.value) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                intakeInput.value = now.toISOString().slice(0, 16);
+            }
+
+            if (select) {
+                select.innerHTML = '<option value="">-- SELECT POI CASE FILE --</option>';
+                try {
+                    if (typeof cachedCasesList === 'undefined' || !cachedCasesList || cachedCasesList.length === 0) {
+                        const res = await fetch(`${API_BASE}/cases`, { headers: getAuthHeaders() });
+                        const data = await res.json();
+                        cachedCasesList = data.cases || data.data || [];
+                    }
+                    cachedCasesList.forEach(c => {
+                        const fullName = `${c.surname ? c.surname.toUpperCase() : ''}, ${c.given_names || ''}`.trim();
+                        const isSelected = pacirId && c.pacir_id === pacirId ? 'selected' : '';
+                        select.innerHTML += `<option value="${c.pacir_id}" ${isSelected}>${fullName} (${c.bic_case_file_number || 'PENDING'})</option>`;
+                    });
+                    if (pacirId) select.value = pacirId;
+                } catch (e) {
+                    console.error('Error populating property POI select:', e);
+                }
+            }
+
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeAddPropertyModal = function() {
+            const modal = document.getElementById('propertyModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.savePropertyItem = async function(event) {
+            event.preventDefault();
+            const pacirId = document.getElementById('propPacirId')?.value || document.getElementById('propPacirSelect')?.value;
+
+            if (!pacirId) {
+                alert('Please select a valid POI Case File.');
+                return;
+            }
+
+            const rawAmount = document.getElementById('propCurrencyAmount')?.value;
+
+            const payload = {
+                pacir_id: pacirId,
+                intake_date: document.getElementById('propIntakeDate')?.value || new Date().toISOString(),
+                item_category: document.getElementById('propCategory')?.value || 'PERSONAL_EFFECTS',
+                description: document.getElementById('propDescription')?.value || 'Surrendered Personal Effects',
+                serial_number_or_notes: document.getElementById('propSerialNotes')?.value || null,
+                currency_amount: (rawAmount !== undefined && rawAmount !== null && rawAmount !== '') ? parseFloat(rawAmount) : null,
+                currency_code: document.getElementById('propCurrencyCode')?.value || 'PGK',
+                storage_locker_ref: document.getElementById('propStorageLocker')?.value || null,
+                custody_status: document.getElementById('propCustodyStatus')?.value || 'IN_CUSTODY',
+                handling_officer: document.getElementById('propHandlingOfficer')?.value || 'Property Officer'
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/property`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.status === 'SUCCESS') {
+                    alert('Property Item Registered Into Custody!');
+                    closeAddPropertyModal();
+                    if (typeof window.loadPropertyLedger === 'function') window.loadPropertyLedger();
+                } else {
+                    alert(`Error registering property: ${result.message}`);
+                }
+            } catch (err) {
+                console.error('Submit property item error:', err);
+                alert('Network error while registering property item.');
+            }
+        };
+
+        window.submitPropertyItem = window.savePropertyItem;
 
         // ============================================================
         // VISITORS & LEGAL COUNSEL MODAL HANDLERS

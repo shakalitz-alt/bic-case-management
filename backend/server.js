@@ -99,8 +99,13 @@ async function logAuditTrail(req, { actionType, targetModule = 'GENERAL', target
     const userRole = req.user?.role || 'OPERATOR';
     const resourceAffected = `${targetModule}:${targetId}`;
     const now = new Date();
+    const parsedUserId = (typeof req.user?.user_id === 'number')
+        ? req.user.user_id
+        : (typeof req.user?.user_id === 'string' && /^\d+$/.test(req.user.user_id))
+            ? parseInt(req.user.user_id, 10)
+            : null;
     const auditRecord = {
-        user_id: req.user?.user_id || null,
+        user_id: parsedUserId,
         username: operatorUsername,
         role: userRole,
         operator_username: operatorUsername,
@@ -325,6 +330,15 @@ app.get('/v1/pacir/:pacirId/pdf', async (req, res) => {
         }
 
         const data = result.rows[0];
+        const [medicalRes, propRes, depRes] = await Promise.all([
+            pool.query('SELECT * FROM poi_medical_records WHERE pacir_id = $1::uuid ORDER BY screening_date DESC, created_at DESC LIMIT 1', [pacirId]),
+            pool.query('SELECT * FROM poi_property_ledger WHERE pacir_id = $1::uuid ORDER BY intake_date DESC', [pacirId]),
+            pool.query('SELECT * FROM poi_deportations WHERE pacir_id = $1::uuid ORDER BY created_at DESC LIMIT 1', [pacirId])
+        ]);
+        const medData = medicalRes.rows[0] || null;
+        const propItems = propRes.rows;
+        const depData = depRes.rows[0] || null;
+
         const qrCodeDataUrl = await QRCode.toDataURL(data.pacir_ref_number);
 
         const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -446,6 +460,85 @@ app.get('/v1/pacir/:pacirId/pdf', async (req, res) => {
            .text('Official Document — PNGICSA Bomana Immigration Centre (BIC)', startX, footerY + 20)
            .text(`Generated on: ${new Date().toLocaleString('en-GB')}`, startX, footerY + 32)
            .text('Classification: PNGICSA OFFICIAL USE ONLY', startX, footerY + 44);
+
+        // ==========================================
+        // PAGE 2: MEDICAL, PROPERTY & DEPORTATION
+        // ==========================================
+        doc.addPage();
+        let page2Y = 40;
+
+        doc.fillColor('#0F1E36').fontSize(11).font('Helvetica-Bold')
+           .text('PNG IMMIGRATION & CITIZENSHIP SERVICE AUTHORITY', startX, page2Y, { width: pageWidth, align: 'center' });
+        doc.fillColor('#8B0000').fontSize(9.5).font('Helvetica-Bold')
+           .text('FORM BIC-01 (SUPPLEMENTARY) — MEDICAL, PROPERTY & DEPORTATION STATUS', startX, page2Y + 16, { width: pageWidth, align: 'center' });
+        doc.fillColor('#64748B').fontSize(8).font('Helvetica')
+           .text(`PACIR REF: ${data.pacir_ref_number} | CASE FILE: ${data.bic_case_file_number || 'PENDING'}`, startX, page2Y + 30, { width: pageWidth, align: 'center' });
+        doc.moveTo(startX, page2Y + 44).lineTo(startX + pageWidth, page2Y + 44).strokeColor('#CBD5E1').lineWidth(1).stroke();
+        page2Y += 54;
+
+        // 4. MEDICAL & HEALTH STATUS
+        doc.rect(startX, page2Y, pageWidth, 18).fill('#0F1E36');
+        doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold').text('4. MEDICAL & HEALTH SCREENING REGISTRY', startX + 8, page2Y + 4);
+        page2Y += 20;
+        doc.rect(startX, page2Y, pageWidth, 68).strokeColor('#CBD5E1').lineWidth(0.8).stroke();
+        doc.fillColor('#334155').fontSize(9);
+        doc.font('Helvetica-Bold').text('Fit for Custody:', startX + 10, page2Y + 8);
+        doc.font('Helvetica').text(medData ? (medData.fit_for_custody ? 'YES - FIT' : 'NO - UNFIT') : 'PENDING SCREENING', startX + 105, page2Y + 8);
+        doc.font('Helvetica-Bold').text('Fit to Travel:', startX + 260, page2Y + 8);
+        doc.font('Helvetica').text(medData ? (medData.fit_to_travel ? 'YES - CLEARED' : 'NO - NOT CLEARED') : 'NOT EVALUATED', startX + 350, page2Y + 8);
+        doc.font('Helvetica-Bold').text('Medical Officer:', startX + 10, page2Y + 24);
+        doc.font('Helvetica').text(medData ? (medData.medical_officer || 'Recorded') : 'N/A', startX + 105, page2Y + 24);
+        doc.font('Helvetica-Bold').text('Screening Date:', startX + 260, page2Y + 24);
+        doc.font('Helvetica').text(medData && medData.screening_date ? new Date(medData.screening_date).toLocaleDateString() : 'Pending', startX + 350, page2Y + 24);
+        doc.font('Helvetica-Bold').text('Clinical Notes:', startX + 10, page2Y + 40);
+        doc.font('Helvetica').text(medData ? (medData.clinical_notes || medData.chronic_conditions || 'None recorded') : 'Awaiting medical officer intake assessment.', startX + 105, page2Y + 40, { width: 375 });
+        page2Y += 78;
+
+        // 5. PROPERTY & VALUABLES CUSTODY LEDGER
+        doc.rect(startX, page2Y, pageWidth, 18).fill('#0F1E36');
+        doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold').text(`5. SURRENDERED PROPERTY & VALUABLES LEDGER (${propItems.length} ITEMS)`, startX + 8, page2Y + 4);
+        page2Y += 20;
+        doc.rect(startX, page2Y, pageWidth, 74).strokeColor('#CBD5E1').lineWidth(0.8).stroke();
+        if (propItems.length === 0) {
+            doc.fillColor('#64748B').fontSize(9).font('Helvetica-Oblique').text('No personal belongings or surrendered valuables currently recorded in custody.', startX + 10, page2Y + 12);
+        } else {
+            doc.fillColor('#334155').fontSize(8.5);
+            propItems.slice(0, 3).forEach((item, idx) => {
+                const itemY = page2Y + 8 + (idx * 18);
+                doc.font('Helvetica-Bold').text(`• [${item.item_category}]`, startX + 10, itemY);
+                doc.font('Helvetica').text(`${item.description} (Locker: ${item.storage_locker_ref || 'N/A'}, Status: ${item.custody_status || 'IN_CUSTODY'})`, startX + 115, itemY, { width: 360 });
+            });
+            if (propItems.length > 3) {
+                doc.font('Helvetica-Oblique').fontSize(8).text(`... plus ${propItems.length - 3} additional logged property items on file.`, startX + 10, page2Y + 58);
+            }
+        }
+        page2Y += 84;
+
+        // 6. DEPORTATION & LOGISTICS PIPELINE STATUS
+        doc.rect(startX, page2Y, pageWidth, 18).fill('#8B0000');
+        doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold').text('6. DEPORTATION & REMOVAL ORDER PIPELINE STATUS', startX + 8, page2Y + 4);
+        page2Y += 20;
+        doc.rect(startX, page2Y, pageWidth, 66).strokeColor('#CBD5E1').lineWidth(0.8).stroke();
+        doc.fillColor('#334155').fontSize(9);
+        doc.font('Helvetica-Bold').text('Order Status:', startX + 10, page2Y + 8);
+        doc.font('Helvetica').text(depData ? (depData.removal_order_status || 'PENDING') : 'NO REMOVAL ORDER ISSUED', startX + 105, page2Y + 8);
+        doc.font('Helvetica-Bold').text('ETC Issued:', startX + 260, page2Y + 8);
+        doc.font('Helvetica').text(depData ? (depData.etc_issued ? 'YES' : 'NO / PENDING') : 'N/A', startX + 350, page2Y + 8);
+        doc.font('Helvetica-Bold').text('Destination:', startX + 10, page2Y + 24);
+        doc.font('Helvetica').text(depData ? (depData.destination_country || 'Unspecified') : 'N/A', startX + 105, page2Y + 24);
+        doc.font('Helvetica-Bold').text('Flight / Route:', startX + 260, page2Y + 24);
+        doc.font('Helvetica').text(depData ? `${depData.airline || ''} ${depData.flight_number || 'TBD'}`.trim() : 'N/A', startX + 350, page2Y + 24);
+        doc.font('Helvetica-Bold').text('Escort Officers:', startX + 10, page2Y + 40);
+        doc.font('Helvetica').text(depData ? ([depData.lead_escort_officer, depData.secondary_escort_officer].filter(Boolean).join(', ') || 'Unassigned') : 'N/A', startX + 105, page2Y + 40);
+        doc.font('Helvetica-Bold').text('Clearance:', startX + 260, page2Y + 40);
+        doc.font('Helvetica').text(depData ? (depData.clearance_status || 'PENDING') : 'N/A', startX + 350, page2Y + 40);
+        page2Y += 76;
+
+        // Attestation Footer on Page 2
+        doc.rect(startX, page2Y, pageWidth, 45).fill('#F8FAFC');
+        doc.fillColor('#0F1E36').fontSize(8).font('Helvetica-Bold').text('OFFICIAL ATTESTATION & COMMAND AUTHORIZATION', startX + 10, page2Y + 6);
+        doc.fillColor('#475569').fontSize(7.5).font('Helvetica').text('This aggregate record has been compiled from authenticated biometric and custodial databases of the Bomana Immigration Centre. Any alterations invalidate this document.', startX + 10, page2Y + 18, { width: pageWidth - 20 });
+        doc.fillColor('#64748B').fontSize(7.5).font('Helvetica').text(`Digital Verification Timestamp: ${new Date().toISOString()}`, startX + 10, page2Y + 32);
 
         doc.end();
     } catch (err) {
@@ -936,7 +1029,7 @@ app.post('/v1/cases/legal', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER'), async (req, res) => {
+app.get('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const query = `
             SELECT d.*, p.surname, p.given_names, p.nationality, p.passport_number, c.bic_case_file_number
@@ -946,9 +1039,16 @@ app.get('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFIC
             ORDER BY d.created_at DESC;
         `;
         const { rows } = await pool.query(query);
-        res.json({ status: 'SUCCESS', count: rows.length, deportations: rows });
+        await logAuditTrail(req, {
+            actionType: 'DEPORTATIONS_VIEWED',
+            targetModule: 'POI_DEPORTATIONS',
+            targetId: 'ALL',
+            description: `Retrieved ${rows.length} deportation records`
+        });
+        res.json({ status: 'SUCCESS', count: rows.length, deportations: rows, data: rows });
     } catch (err) {
-        res.status(500).json({ status: 'ERROR', message: err.message });
+        console.error('Error fetching deportations:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message, deportations: [] });
     }
 });
 
@@ -976,14 +1076,19 @@ const saveDeportationRecord = async (req, res) => {
             property_released,
             remarks
         } = req.body;
-        if (!pacir_id || !destination_country) {
-            return res.status(400).json({ status: 'ERROR', message: 'pacir_id and destination_country are required.' });
+
+        if (!pacir_id) {
+            return res.status(400).json({ status: 'ERROR', message: 'pacir_id is required.' });
         }
 
-        const deportationRef = deportation_order_ref || `DEP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const destCountry = (destination_country && String(destination_country).trim()) || 'Unspecified';
+        const deportationRef = (deportation_order_ref && String(deportation_order_ref).trim()) || `DEP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
         const escortDetails = escort_team_details || [lead_escort_officer, secondary_escort_officer].filter(Boolean).join('; ') || null;
         const requiresEscort = escort_required ?? Boolean(lead_escort_officer || secondary_escort_officer || escortDetails);
         const orderStatus = removal_order_status || 'PENDING';
+        const etcIssuedVal = etc_issued === true || etc_issued === 'true' || Boolean(cmo_signed_date || ctd_document_ref);
+        const depDateVal = (departure_date && String(departure_date).trim()) ? departure_date : null;
+        const cmoDateVal = (cmo_signed_date && String(cmo_signed_date).trim()) ? cmo_signed_date : null;
 
         const query = `
             INSERT INTO poi_deportations (
@@ -1002,15 +1107,15 @@ const saveDeportationRecord = async (req, res) => {
             deportationRef,
             removal_type || 'DEPORTATION_ORDER',
             orderStatus,
-            cmo_signed_date || null,
+            cmoDateVal,
             embassy_ctd_status || clearance_status || 'PENDING',
-            etc_issued ?? Boolean(cmo_signed_date || ctd_document_ref),
+            etcIssuedVal,
             ctd_document_ref || null,
             transit_route || null,
             flight_number || null,
             airline || null,
-            departure_date || null,
-            destination_country,
+            depDateVal,
+            destCountry,
             requiresEscort,
             lead_escort_officer || null,
             secondary_escort_officer || null,
@@ -1035,13 +1140,13 @@ const saveDeportationRecord = async (req, res) => {
     }
 };
 
-app.post('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER'), saveDeportationRecord);
-app.post('/v1/deportations/register', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER'), saveDeportationRecord);
+app.post('/v1/deportations', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER', 'CASE_OFFICER'), saveDeportationRecord);
+app.post('/v1/deportations/register', authenticateToken, authorizeRoles('DEPORTATION_OFFICER', 'SECURITY_OFFICER', 'CASE_OFFICER'), saveDeportationRecord);
 
 // ============================================================
-// PHASE 2 API ENDPOINTS: MEDICAL & PROPERTY CUSTODY
+// MEDICAL & HEALTH REGISTRY WORKFLOW
 // ============================================================
-app.get('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), async (req, res) => {
+app.get('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER', 'CASE_OFFICER', 'INTAKE_OFFICER', 'SECURITY_OFFICER'), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT m.*, p.pacir_ref_number, p.bic_case_file_number, p.surname, p.given_names,
@@ -1051,47 +1156,72 @@ app.get('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), asy
              LEFT JOIN system_users u ON u.user_id = m.medical_officer_id
              ORDER BY m.screening_date DESC NULLS LAST, m.created_at DESC`
         );
-        res.json({ status: 'SUCCESS', count: rows.length, records: rows });
+        await logAuditTrail(req, {
+            actionType: 'MEDICAL_REGISTRY_VIEWED',
+            targetModule: 'POI_MEDICAL_RECORDS',
+            targetId: 'ALL',
+            description: `Retrieved ${rows.length} medical records`
+        });
+        res.json({ status: 'SUCCESS', count: rows.length, records: rows, data: rows });
     } catch (err) {
         console.error('Error fetching medical records:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message, records: [] });
     }
 });
 
-app.get('/v1/medical/:pacir_id', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), async (req, res) => {
+const getMedicalRecordByPacir = async (req, res) => {
     try {
-        const { pacir_id } = req.params;
+        const pacirId = req.params.pacirId || req.params.pacir_id;
         const result = await pool.query(
             `SELECT m.*, u.full_name as officer_name 
              FROM poi_medical_records m 
              LEFT JOIN system_users u ON m.medical_officer_id = u.user_id
-             WHERE m.pacir_id = $1`,
-            [pacir_id]
+             WHERE m.pacir_id = $1::uuid
+             ORDER BY m.screening_date DESC NULLS LAST, m.created_at DESC`,
+            [pacirId]
         );
-        const records = result.rows.sort((a, b) => new Date(b.screening_date || b.created_at) - new Date(a.screening_date || a.created_at));
-        res.json({ status: 'SUCCESS', count: records.length, records, record: records[0] || null });
+        const records = result.rows;
+        await logAuditTrail(req, {
+            actionType: 'MEDICAL_RECORD_VIEWED',
+            targetModule: 'POI_MEDICAL_RECORDS',
+            targetId: pacirId,
+            description: `Retrieved medical record for PACIR ${pacirId}`
+        });
+        res.json({ status: 'SUCCESS', count: records.length, records, record: records[0] || null, data: records });
     } catch (err) {
         console.error('Error fetching medical record:', err);
         res.status(500).json({ status: 'ERROR', message: err.message, records: [] });
     }
-});
+};
+
+app.get('/v1/medical/:pacirId', authenticateToken, authorizeRoles('MEDICAL_OFFICER', 'CASE_OFFICER', 'INTAKE_OFFICER', 'SECURITY_OFFICER'), getMedicalRecordByPacir);
+app.get('/v1/medical/:pacir_id', authenticateToken, authorizeRoles('MEDICAL_OFFICER', 'CASE_OFFICER', 'INTAKE_OFFICER', 'SECURITY_OFFICER'), getMedicalRecordByPacir);
 
 const saveMedicalRecord = async (req, res) => {
     try {
-        const { pacir_id, blood_pressure, pre_existing_conditions, allergies, medication_prescribed, contagious_disease_risk, isolation_required } = req.body;
+        const {
+            pacir_id,
+            blood_pressure,
+            pre_existing_conditions,
+            allergies,
+            medication_prescribed,
+            contagious_disease_risk,
+            isolation_required
+        } = req.body;
+
         const rawPulseRate = req.body.pulse_rate ?? req.body.heart_rate;
-        const pulse_rate = rawPulseRate === '' ? null : rawPulseRate;
+        const pulse_rate = rawPulseRate === '' || rawPulseRate === undefined ? null : String(rawPulseRate);
         const rawTemperature = req.body.temperature_c ?? req.body.temperature;
-        const temperature_c = rawTemperature === '' ? null : rawTemperature;
-        const suicide_watch_active = req.body.suicide_watch_active ?? req.body.suicide_risk_identified ?? false;
-        const screening_date = req.body.screening_date || new Date();
-        const medical_officer_id = req.user.user_id;
-        const medical_officer = req.body.medical_officer || req.user.full_name || req.user.username;
-        const fit_for_custody = req.body.fit_for_custody ?? req.body.fit_for_detention ?? true;
-        const fit_to_travel = req.body.fit_to_travel ?? req.body.fit_for_travel ?? false;
+        const temperature_c = (rawTemperature !== undefined && rawTemperature !== null && rawTemperature !== '') ? parseFloat(rawTemperature) : null;
+        const suicide_watch_active = req.body.suicide_watch_active === true || req.body.suicide_watch_active === 'true' || req.body.suicide_risk_identified === true;
+        const screening_date = (req.body.screening_date && String(req.body.screening_date).trim()) ? req.body.screening_date : new Date();
+        const medical_officer_id = req.user?.user_id || null;
+        const medical_officer = req.body.medical_officer || req.user?.full_name || req.user?.username || 'Medical Officer';
+        const fit_for_custody = req.body.fit_for_custody !== undefined ? (req.body.fit_for_custody === true || req.body.fit_for_custody === 'true') : (req.body.fit_for_detention !== false);
+        const fit_to_travel = req.body.fit_to_travel === true || req.body.fit_to_travel === 'true' || req.body.fit_for_travel === true || req.body.fit_for_travel === 'true';
         const chronic_conditions = req.body.chronic_conditions ?? pre_existing_conditions ?? null;
         const medications_prescribed = req.body.medications_prescribed ?? medication_prescribed ?? null;
-        const emergency_referral_required = req.body.emergency_referral_required ?? req.body.immediate_medical_required ?? false;
+        const emergency_referral_required = req.body.emergency_referral_required === true || req.body.emergency_referral_required === 'true' || req.body.immediate_medical_required === true;
         const clinical_notes = req.body.clinical_notes ?? req.body.medical_notes ?? req.body.notes ?? null;
         const notes = clinical_notes;
         const fit_for_detention = fit_for_custody;
@@ -1102,7 +1232,7 @@ const saveMedicalRecord = async (req, res) => {
         }
 
         const existing = await pool.query(
-            'SELECT medical_id FROM poi_medical_records WHERE pacir_id = $1 ORDER BY screening_date DESC NULLS LAST, created_at DESC NULLS LAST LIMIT 1',
+            'SELECT medical_id FROM poi_medical_records WHERE pacir_id = $1::uuid ORDER BY screening_date DESC NULLS LAST, created_at DESC NULLS LAST LIMIT 1',
             [pacir_id]
         );
         let recordResult;
@@ -1122,9 +1252,9 @@ const saveMedicalRecord = async (req, res) => {
                 [
                     screening_date, medical_officer_id, medical_officer,
                     fit_for_custody, fit_to_travel, chronic_conditions, medications_prescribed,
-                    emergency_referral_required, clinical_notes, blood_pressure, pulse_rate,
-                    temperature_c, pre_existing_conditions, allergies, medications_prescribed,
-                    contagious_disease_risk, suicide_watch_active, isolation_required,
+                    emergency_referral_required, clinical_notes, blood_pressure || null, pulse_rate,
+                    temperature_c, pre_existing_conditions || chronic_conditions, allergies || null, medications_prescribed,
+                    contagious_disease_risk || false, suicide_watch_active, isolation_required || false,
                     fit_for_detention, fit_for_travel, notes, existing.rows[0].medical_id
                 ]
             );
@@ -1142,9 +1272,9 @@ const saveMedicalRecord = async (req, res) => {
                 [
                     pacir_id, screening_date, medical_officer_id, medical_officer,
                     fit_for_custody, fit_to_travel, chronic_conditions, medications_prescribed,
-                    emergency_referral_required, clinical_notes, blood_pressure, pulse_rate,
-                    temperature_c, pre_existing_conditions, allergies, medications_prescribed,
-                    contagious_disease_risk, suicide_watch_active, isolation_required,
+                    emergency_referral_required, clinical_notes, blood_pressure || null, pulse_rate,
+                    temperature_c, pre_existing_conditions || chronic_conditions, allergies || null, medications_prescribed,
+                    contagious_disease_risk || false, suicide_watch_active, isolation_required || false,
                     fit_for_detention, fit_for_travel, notes
                 ]
             );
@@ -1156,6 +1286,7 @@ const saveMedicalRecord = async (req, res) => {
             targetId: pacir_id,
             description: `Medical record saved for PACIR ${pacir_id}`
         });
+
         res.json({ status: 'SUCCESS', message: 'Medical Record Saved Successfully', record: recordResult.rows[0] || null });
     } catch (err) {
         console.error('Error saving medical record:', err);
@@ -1163,10 +1294,13 @@ const saveMedicalRecord = async (req, res) => {
     }
 };
 
-app.post('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), saveMedicalRecord);
-app.post('/v1/medical/log', authenticateToken, authorizeRoles('MEDICAL_OFFICER'), saveMedicalRecord);
+app.post('/v1/medical', authenticateToken, authorizeRoles('MEDICAL_OFFICER', 'CASE_OFFICER'), saveMedicalRecord);
+app.post('/v1/medical/log', authenticateToken, authorizeRoles('MEDICAL_OFFICER', 'CASE_OFFICER'), saveMedicalRecord);
 
-app.get('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER'), async (req, res) => {
+// ============================================================
+// PROPERTY, VALUABLES & CUSTODY LEDGER WORKFLOW
+// ============================================================
+app.get('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT l.*, p.pacir_ref_number, p.bic_case_file_number, p.surname, p.given_names
@@ -1174,38 +1308,56 @@ app.get('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'I
              JOIN pacir_reports p ON p.pacir_id = l.pacir_id
              ORDER BY l.intake_date DESC, l.created_at DESC`
         );
-        res.json({ status: 'SUCCESS', count: rows.length, ledger: rows, items: rows });
+        await logAuditTrail(req, {
+            actionType: 'PROPERTY_REGISTRY_VIEWED',
+            targetModule: 'POI_PROPERTY_LEDGER',
+            targetId: 'ALL',
+            description: `Retrieved ${rows.length} property items`
+        });
+        res.json({ status: 'SUCCESS', count: rows.length, ledger: rows, items: rows, data: rows });
     } catch (err) {
         console.error('Error fetching property ledger:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message, ledger: [], items: [] });
     }
 });
 
-app.get('/v1/property/:pacir_id', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER'), async (req, res) => {
+const getPropertyByPacir = async (req, res) => {
     try {
-        const { pacir_id: pacirId } = req.params;
+        const pacirId = req.params.pacirId || req.params.pacir_id;
         const result = await pool.query(
-            'SELECT * FROM poi_property_ledger WHERE pacir_id = $1 ORDER BY intake_date DESC, created_at DESC',
+            'SELECT * FROM poi_property_ledger WHERE pacir_id = $1::uuid ORDER BY intake_date DESC, created_at DESC',
             [pacirId]
         );
-        res.json({ status: 'SUCCESS', count: result.rows.length, ledger: result.rows, items: result.rows });
+        await logAuditTrail(req, {
+            actionType: 'PROPERTY_LEDGER_VIEWED',
+            targetModule: 'POI_PROPERTY_LEDGER',
+            targetId: pacirId,
+            description: `Retrieved ${result.rows.length} property items for PACIR ${pacirId}`
+        });
+        res.json({ status: 'SUCCESS', count: result.rows.length, ledger: result.rows, items: result.rows, data: result.rows });
     } catch (err) {
         console.error('Error fetching property ledger:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message, ledger: [], items: [] });
     }
-});
+};
 
-app.post('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER'), async (req, res) => {
+app.get('/v1/property/:pacirId', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), getPropertyByPacir);
+app.get('/v1/property/:pacir_id', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), getPropertyByPacir);
+
+app.post('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const pacirId = req.body.pacir_id;
         const itemCategory = req.body.item_category;
         const description = req.body.description ?? req.body.item_description;
         const serialNumberOrNotes = req.body.serial_number_or_notes ?? ([req.body.serial_number, req.body.notes].filter(Boolean).join(' | ') || null);
-        const currencyAmount = req.body.currency_amount ?? req.body.estimated_val_pgk ?? null;
+        const rawCurr = req.body.currency_amount ?? req.body.estimated_val_pgk;
+        const currencyAmount = (rawCurr !== undefined && rawCurr !== null && rawCurr !== '') ? parseFloat(rawCurr) : null;
         const currencyCode = req.body.currency_code || (currencyAmount !== null ? 'PGK' : null);
         const storageLockerRef = req.body.storage_locker_ref ?? req.body.storage_locker_number ?? null;
         const custodyStatus = req.body.custody_status || 'IN_CUSTODY';
-        const handlingOfficer = req.body.handling_officer || req.user.full_name || req.user.username;
+        const handlingOfficer = req.body.handling_officer || req.user?.full_name || req.user?.username || 'Property Officer';
+        const intakeDate = (req.body.intake_date && String(req.body.intake_date).trim()) ? req.body.intake_date : new Date();
+
         if (!pacirId || !itemCategory || !description) {
             return res.status(400).json({ status: 'ERROR', message: 'pacir_id, item_category, and description are required.' });
         }
@@ -1219,7 +1371,7 @@ app.post('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', '
             RETURNING *`,
             [
                 pacirId,
-                req.body.intake_date || new Date(),
+                intakeDate,
                 itemCategory,
                 description,
                 serialNumberOrNotes,
@@ -1228,7 +1380,7 @@ app.post('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', '
                 storageLockerRef,
                 custodyStatus,
                 handlingOfficer,
-                req.user.user_id
+                req.user?.user_id || null
             ]
         );
 
@@ -1251,13 +1403,21 @@ app.post('/v1/property', authenticateToken, authorizeRoles('SECURITY_OFFICER', '
     }
 });
 
+// ============================================================
+// FORM BIC-01 AGGREGATED PAYLOAD & REPORT GENERATOR
+// ============================================================
 app.get('/v1/reports/bic-01/:pacirId', authenticateToken, authorizeRoles('INTAKE_OFFICER', 'CASE_OFFICER', 'SECURITY_OFFICER', 'MEDICAL_OFFICER', 'DEPORTATION_OFFICER'), async (req, res) => {
     try {
         const { pacirId } = req.params;
+
+        if (req.query.format === 'pdf' || req.headers.accept?.includes('application/pdf')) {
+            return res.redirect(`/v1/pacir/${encodeURIComponent(pacirId)}/pdf`);
+        }
+
         const poiResult = await pool.query(
-            `SELECT p.*, COALESCE(r.overall_calculated_risk, p.overall_calculated_risk, 'LOW') AS overall_calculated_risk,
+            `SELECT p.*, COALESCE(r.overall_calculated_risk::text, p.overall_calculated_risk::text, 'LOW') AS overall_calculated_risk,
                     d.bic_case_file_number, d.decision, d.decision_status, d.special_instructions,
-                    COALESCE(c.name, p.allocated_compound, 'UNALLOCATED') AS allocated_compound
+                    COALESCE(c.name::text, p.allocated_compound::text, 'UNALLOCATED') AS allocated_compound
              FROM pacir_reports p
              LEFT JOIN risk_assessments r ON p.pacir_id = r.pacir_id
              LEFT JOIN admission_decisions d ON p.pacir_id = d.pacir_id
@@ -1273,15 +1433,35 @@ app.get('/v1/reports/bic-01/:pacirId', authenticateToken, authorizeRoles('INTAKE
             pool.query('SELECT * FROM poi_property_ledger WHERE pacir_id = $1::uuid ORDER BY intake_date DESC', [pacirId])
         ]);
 
+        const latestMedical = medicalResult.rows[0] || null;
+        const currentDeportation = deportationResult.rows[0] || null;
+
+        await logAuditTrail(req, {
+            actionType: 'BIC01_REPORT_GENERATED',
+            targetModule: 'REPORTS',
+            targetId: pacirId,
+            description: `Generated Form BIC-01 aggregated report for PACIR ${pacirId}`
+        });
+
         res.json({
             status: 'SUCCESS',
             report: {
                 generated_at: new Date().toISOString(),
+                poi_identity: poiResult.rows[0],
                 poi: poiResult.rows[0],
+                latest_medical_status: latestMedical,
                 medical_records: medicalResult.rows,
+                current_deportation_status: currentDeportation,
+                deportation_removal_order: currentDeportation,
                 deportations: deportationResult.rows,
+                full_property_ledger: propertyResult.rows,
                 property_ledger: propertyResult.rows
-            }
+            },
+            poi_identity: poiResult.rows[0],
+            poi: poiResult.rows[0],
+            latest_medical_status: latestMedical,
+            current_deportation_status: currentDeportation,
+            full_property_ledger: propertyResult.rows
         });
     } catch (err) {
         console.error('Error building aggregated BIC-01 report:', err.message);
