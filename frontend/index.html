@@ -523,7 +523,7 @@
                                     <i class="fa-solid fa-database"></i>
                                     <span>Run Manual Backup</span>
                                 </button>
-                                <button onclick="openUserModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1">
+                                <button data-user-admin-action="true" onclick="window.openAddOperatorModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1">
                                     <i class="fa-solid fa-user-plus text-[10px]"></i>
                                     <span>Add New Operator</span>
                                 </button>
@@ -1397,53 +1397,46 @@
     </div>
 
     <!-- SYSTEM USER / OPERATOR PROVISIONING MODAL -->
-    <div id="userModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div id="addOperatorModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
             <div class="bg-brand-navy px-6 py-4 flex justify-between items-center text-white border-b-2 border-brand-red">
                 <div class="flex items-center space-x-2">
                     <i class="fa-solid fa-user-plus text-brand-red"></i>
-                    <h3 class="font-bold text-sm tracking-wide">PROVISION NEW SYSTEM OPERATOR</h3>
+                    <h3 class="font-bold text-sm tracking-wide">ADD NEW OPERATOR</h3>
                 </div>
-                <button onclick="closeUserModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="window.closeAddOperatorModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             
-            <form onsubmit="submitUserRegistration(event)" class="p-6 space-y-4 text-xs font-medium">
+            <form onsubmit="window.submitNewOperator(event)" class="p-6 space-y-4 text-xs font-medium">
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Username *</label>
-                    <input type="text" id="usrName" required placeholder="e.g. officer.kila" class="w-full px-3 py-2 bg-slate-50 border rounded-lg lowercase font-bold">
+                    <label for="addOperatorFullName" class="block text-slate-700 font-bold mb-1">Full Name *</label>
+                    <input type="text" id="addOperatorFullName" required autocomplete="name" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
                 </div>
-
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Full Name / Designation *</label>
-                    <input type="text" id="usrFullName" required placeholder="e.g. Compliance Officer Sarah Kila" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    <label for="addOperatorUsername" class="block text-slate-700 font-bold mb-1">Username *</label>
+                    <input type="text" id="addOperatorUsername" required autocomplete="username" class="w-full px-3 py-2 bg-slate-50 border rounded-lg lowercase font-bold">
                 </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Assigned Role *</label>
-                        <select id="usrRole" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
-                            <option value="INTAKE_OFFICER">INTAKE OFFICER</option>
-                            <option value="MEDICAL_OFFICER">MEDICAL OFFICER</option>
-                            <option value="SECURITY_OFFICER">SECURITY OFFICER</option>
-                            <option value="DEPORTATION_OFFICER">DEPORTATION OFFICER</option>
-                            <option value="COMMANDER">COMMANDER / EXECUTIVE</option>
-                            <option value="SYSTEM_ADMIN">SYSTEM ADMIN</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-700 font-bold mb-1">Department / Division</label>
-                        <input type="text" id="usrDept" placeholder="e.g. Enforcement & Operations" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
-                    </div>
-                </div>
-
                 <div>
-                    <label class="block text-slate-700 font-bold mb-1">Initial Password *</label>
-                    <input type="password" id="usrPass" required placeholder="••••••••••••" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                    <label for="addOperatorEmail" class="block text-slate-700 font-bold mb-1">Email Address *</label>
+                    <input type="email" id="addOperatorEmail" required autocomplete="email" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
+                </div>
+                <div>
+                    <label for="addOperatorRole" class="block text-slate-700 font-bold mb-1">Role Delegation *</label>
+                    <select id="addOperatorRole" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg font-bold">
+                        <option value="SYSTEM_ADMIN">SYSTEM ADMIN</option>
+                        <option value="DUTY_MANAGER">DUTY MANAGER</option>
+                        <option value="CASE_OFFICER">CASE OFFICER</option>
+                        <option value="COMPLIANCE_OFFICER">COMPLIANCE OFFICER</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="addOperatorPassword" class="block text-slate-700 font-bold mb-1">Initial Password *</label>
+                    <input type="password" id="addOperatorPassword" required minlength="8" autocomplete="new-password" class="w-full px-3 py-2 bg-slate-50 border rounded-lg">
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-brand-navy text-white font-bold rounded-lg shadow">Provision User Account</button>
+                    <button type="button" onclick="window.closeAddOperatorModal()" class="px-4 py-2 bg-slate-200 font-bold text-slate-700 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-red text-white font-bold rounded-lg shadow">Add Operator</button>
                 </div>
             </form>
         </div>
@@ -1582,6 +1575,10 @@
             document.querySelectorAll('[data-rbac-write]').forEach(button => {
                 button.hidden = isReadOnlyRole;
                 button.disabled = isReadOnlyRole;
+            });
+            document.querySelectorAll('[data-user-admin-action]').forEach(button => {
+                button.hidden = role !== 'SYSTEM_ADMIN';
+                button.disabled = role !== 'SYSTEM_ADMIN';
             });
         };
 
@@ -2330,22 +2327,43 @@
         async function loadSystemUsers() {
             try {
                 const res = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error(`System users request failed (HTTP ${res.status}).`);
                 const data = await res.json();
                 if (data.users) {
-                    document.getElementById('usersTableBody').innerHTML = data.users.map(u => `
-                        <tr class="hover:bg-slate-50">
-                            <td class="py-3 px-4 font-bold">${u.full_name}</td>
-                            <td class="py-3 px-4 font-mono">${u.username}</td>
-                            <td class="py-3 px-4">${u.email || 'N/A'}</td>
-                            <td class="py-3 px-4">${u.role}</td>
-                            <td class="py-3 px-4">${u.is_active ? 'ACTIVE' : 'INACTIVE'}</td>
-                            <td class="py-3 px-4 text-right">
-                                <button onclick="openResetPasswordModal('${u.user_id}', '${u.username}')" class="text-[11px] font-bold px-2 py-1 rounded bg-amber-100 text-amber-800"><i class="fa-solid fa-key mr-1"></i> Reset Password</button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    })[character]);
+                    document.getElementById('usersTableBody').innerHTML = data.users.map(user => {
+                        const status = String(user.status || (user.is_active ? 'ACTIVE' : 'DISABLED')).toUpperCase();
+                        const username = user.username || user.operator_username || '';
+                        const encodedUsername = encodeURIComponent(username);
+                        return `
+                            <tr class="hover:bg-slate-50">
+                                <td class="py-3 px-4 font-bold">${escapeHtml(user.full_name)}</td>
+                                <td class="py-3 px-4 font-mono">${escapeHtml(username)}</td>
+                                <td class="py-3 px-4">${escapeHtml(user.email || 'N/A')}</td>
+                                <td class="py-3 px-4">${escapeHtml(user.role)}</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 rounded font-bold text-[10px] ${status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${escapeHtml(status)}</span></td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="inline-flex items-center justify-end gap-1.5">
+                                        <button data-user-admin-action="true" data-operator-username="${encodedUsername}" onclick="window.openResetPasswordModal('${escapeHtml(user.user_id)}', decodeURIComponent(this.dataset.operatorUsername))" class="text-[11px] font-bold px-2 py-1 rounded bg-amber-100 text-amber-800"><i class="fa-solid fa-key mr-1"></i> Reset Password</button>
+                                        <button data-user-admin-action="true" data-operator-username="${encodedUsername}" data-current-status="${escapeHtml(status)}" onclick="window.toggleOperatorStatus(decodeURIComponent(this.dataset.operatorUsername), this.dataset.currentStatus)" class="text-[11px] font-bold px-2 py-1 rounded ${status === 'ACTIVE' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}"><i class="fa-solid ${status === 'ACTIVE' ? 'fa-user-slash' : 'fa-user-check'} mr-1"></i>${status === 'ACTIVE' ? 'Disable' : 'Enable'}</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    window.applyRbacUiRestrictions();
                 }
-            } catch (err) {}
+            } catch (err) {
+                console.error('Error loading system users:', err);
+                const tableBody = document.getElementById('usersTableBody');
+                if (tableBody) tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Failed to load operators.</td></tr>';
+            }
         }
 
         async function loadAuditLogs() {
@@ -3464,29 +3482,37 @@
         // ============================================================
         // SYSTEM USER / OPERATOR MODAL HANDLERS
         // ============================================================
-        window.openUserModal = function() {
-            const modal = document.getElementById('userModal');
+        window.openAddOperatorModal = function() {
+            const modal = document.getElementById('addOperatorModal');
             if (modal) {
+                document.getElementById('addOperatorFullName').value = '';
+                document.getElementById('addOperatorUsername').value = '';
+                document.getElementById('addOperatorEmail').value = '';
+                document.getElementById('addOperatorRole').value = 'CASE_OFFICER';
+                document.getElementById('addOperatorPassword').value = '';
                 modal.classList.remove('hidden');
             } else {
-                console.warn('userModal element not found in DOM.');
+                console.warn('addOperatorModal element not found in DOM.');
             }
         };
 
-        window.closeUserModal = function() {
-            const modal = document.getElementById('userModal');
+        window.closeAddOperatorModal = function() {
+            const modal = document.getElementById('addOperatorModal');
             if (modal) modal.classList.add('hidden');
         };
 
-        window.submitUserRegistration = async function(event) {
+        window.openUserModal = window.openAddOperatorModal;
+        window.closeUserModal = window.closeAddOperatorModal;
+
+        window.submitNewOperator = async function(event) {
             event.preventDefault();
 
             const payload = {
-                username: document.getElementById('usrName')?.value,
-                full_name: document.getElementById('usrFullName')?.value,
-                role: document.getElementById('usrRole')?.value,
-                email: null,
-                password: document.getElementById('usrPass')?.value
+                full_name: document.getElementById('addOperatorFullName')?.value.trim(),
+                username: document.getElementById('addOperatorUsername')?.value.trim(),
+                email: document.getElementById('addOperatorEmail')?.value.trim(),
+                role: document.getElementById('addOperatorRole')?.value,
+                password: document.getElementById('addOperatorPassword')?.value
             };
 
             try {
@@ -3496,16 +3522,40 @@
                     body: JSON.stringify(payload)
                 });
                 const result = await res.json();
-                if (result.status === 'SUCCESS') {
-                    alert(`Operator Provisioned Successfully!\nUser: ${payload.username}`);
-                    closeUserModal();
+                if (res.ok && result.status === 'SUCCESS') {
+                    alert(`Operator created successfully.\nUser: ${payload.username}`);
+                    window.closeAddOperatorModal();
                     if (typeof loadSystemUsers === 'function') loadSystemUsers();
                 } else {
-                    alert(`Error provisioning user: ${result.message}`);
+                    alert(`Error creating operator: ${result.message || 'Request failed.'}`);
                 }
             } catch(err) {
                 console.error('Error creating user account:', err);
-                alert('Failed to provision operator account.');
+                alert('Failed to create operator account.');
+            }
+        };
+
+        window.submitUserRegistration = window.submitNewOperator;
+
+        window.toggleOperatorStatus = async function(username, currentStatus) {
+            const nextStatus = String(currentStatus).toUpperCase() === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+            if (nextStatus === 'DISABLED' && !window.confirm(`Disable operator ${username}?`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/users/${encodeURIComponent(username)}/status`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ status: nextStatus })
+                });
+                const result = await res.json();
+                if (!res.ok || result.status !== 'SUCCESS') {
+                    alert(`Error updating operator status: ${result.message || 'Request failed.'}`);
+                    return;
+                }
+                await loadSystemUsers();
+            } catch (err) {
+                console.error('Error updating operator status:', err);
+                alert('Failed to update operator status.');
             }
         };
 

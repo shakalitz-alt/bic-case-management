@@ -34,6 +34,35 @@ pool.on('error', (err) => {
     console.error('Unexpected error on idle PostgreSQL client:', err.message);
 });
 
+async function getSystemUserColumns(queryable = pool) {
+    const result = await queryable.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = 'system_users'`
+    );
+    const columns = new Set(result.rows.map(row => row.column_name));
+    if (!columns.size) throw new Error('Required system_users table is unavailable.');
+    return columns;
+}
+
+function getSystemUsernameExpression(columns, tableAlias = '') {
+    const prefix = tableAlias ? `${tableAlias}.` : '';
+    const usernameColumns = ['username', 'operator_username'].filter(column => columns.has(column));
+    if (!usernameColumns.length) throw new Error('system_users username column is unavailable.');
+    if (usernameColumns.length === 1) return `${prefix}${usernameColumns[0]}::text`;
+    return `COALESCE(NULLIF(${prefix}username::text, ''), NULLIF(${prefix}operator_username::text, ''))`;
+}
+
+function getSystemUserStatusExpression(columns, tableAlias = '') {
+    const prefix = tableAlias ? `${tableAlias}.` : '';
+    const disabledChecks = [];
+    if (columns.has('status')) disabledChecks.push(`UPPER(COALESCE(${prefix}status::text, '')) = 'DISABLED'`);
+    if (columns.has('is_active')) disabledChecks.push(`${prefix}is_active IS FALSE`);
+    if (!disabledChecks.length) throw new Error('system_users active status column is unavailable.');
+    return `CASE WHEN ${disabledChecks.join(' OR ')} THEN 'DISABLED' ELSE 'ACTIVE' END`;
+}
+
 // ==========================================
 // MIDDLEWARE
 // ==========================================
@@ -42,7 +71,7 @@ app.use(cors());
 app.use(express.json());
 
 // JWT Authentication Middleware
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -50,13 +79,29 @@ const authenticateToken = (req, res, next) => {
         return res.status(401).json({ status: 'ERROR', message: 'Authentication token required' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
+    try {
+        const user = jwt.verify(token, JWT_SECRET);
+        const result = await pool.query('SELECT * FROM system_users WHERE user_id = $1', [user.user_id]);
+        if (!result.rows.length) {
+            return res.status(401).json({ status: 'ERROR', message: 'Operator account was not found.' });
+        }
+        const account = result.rows[0];
+        if (account.is_active === false || String(account.status || '').toUpperCase() === 'DISABLED') {
+            return res.status(403).json({ status: 'ERROR', message: 'Account is disabled. Contact a System Administrator.' });
+        }
+        req.user = {
+            ...user,
+            username: user.username || account.username || account.operator_username,
+            role: account.role || user.role
+        };
+        next();
+    } catch (err) {
+        if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError' || err.name === 'NotBeforeError') {
             return res.status(403).json({ status: 'ERROR', message: 'Invalid or expired authentication token' });
         }
-        req.user = user;
-        next();
-    });
+        console.error('Authentication status check failed:', err.message);
+        res.status(503).json({ status: 'ERROR', message: 'Unable to verify operator account status.' });
+    }
 };
 
 // ============================================================
@@ -84,6 +129,12 @@ const authorizeRoles = (...allowedRoles) => {
 
 const requireRole = (allowedRoles = []) => authorizeRoles(...allowedRoles);
 const authorizeRole = requireRole;
+const requireExactSystemAdmin = (req, res, next) => {
+    if (req.user?.role?.toUpperCase() !== 'SYSTEM_ADMIN') {
+        return res.status(403).json({ status: 'ERROR', message: 'Access Denied: SYSTEM_ADMIN role required.' });
+    }
+    next();
+};
 
 async function logAuditTrail(req, { actionType, targetModule = 'GENERAL', targetId = 'N/A', description = '', details = {} }, queryable = pool) {
     const schemaResult = await queryable.query(
@@ -141,8 +192,13 @@ app.post('/v1/auth/login', async (req, res) => {
             return res.status(400).json({ status: 'ERROR', message: 'Username and password are required.' });
         }
 
+        const userColumns = await getSystemUserColumns();
+        const usernameExpression = getSystemUsernameExpression(userColumns);
         const result = await pool.query(
-            'SELECT * FROM system_users WHERE LOWER(username) = LOWER($1)',
+            `SELECT *, ${usernameExpression} AS resolved_username
+             FROM system_users
+             WHERE LOWER(${usernameExpression}) = LOWER($1)
+             LIMIT 1`,
             [username.trim()]
         );
 
@@ -151,8 +207,9 @@ app.post('/v1/auth/login', async (req, res) => {
         }
 
         const user = result.rows[0];
+        user.username = user.username || user.operator_username || user.resolved_username;
 
-        if (!user.is_active) {
+        if (user.is_active === false || String(user.status || '').toUpperCase() === 'DISABLED') {
             return res.status(403).json({ status: 'ERROR', message: 'Account is deactivated. Contact ICT Service Desk.' });
         }
 
@@ -891,33 +948,171 @@ app.get('/v1/audit/logs', authenticateToken, authorizeRoles('DUTY_MANAGER', 'COM
 
 app.get('/v1/users', authenticateToken, authorizeRoles('SYSTEM_ADMIN', 'COMMANDER'), async (req, res) => {
     try {
-        const { rows } = await pool.query(`SELECT user_id, username, full_name, email, role, is_active, created_at FROM system_users ORDER BY created_at DESC;`);
+        const columns = await getSystemUserColumns();
+        const usernameExpression = getSystemUsernameExpression(columns);
+        const statusExpression = getSystemUserStatusExpression(columns);
+        const isActiveExpression = `(${statusExpression}) = 'ACTIVE'`;
+        const { rows } = await pool.query(`
+            SELECT user_id, ${usernameExpression} AS username, full_name, email, role,
+                   ${isActiveExpression} AS is_active, ${statusExpression} AS status, created_at
+            FROM system_users
+            ORDER BY created_at DESC
+        `);
         res.json({ status: 'SUCCESS', count: rows.length, users: rows });
     } catch (err) {
+        console.error('Error fetching system users:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
 
-app.post('/v1/users', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
+app.post('/v1/users', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
     try {
-        const { username, full_name, email, role, password } = req.body;
-        const hashedPassword = await bcrypt.hash(password || 'AdminPass2026!', 10);
+        const username = String(req.body.username || '').trim();
+        const fullName = String(req.body.full_name || '').trim();
+        const email = String(req.body.email || '').trim();
+        const password = String(req.body.password || '');
+        const role = String(req.body.role || '').toUpperCase();
+        const allowedRoles = new Set(['SYSTEM_ADMIN', 'DUTY_MANAGER', 'CASE_OFFICER', 'COMPLIANCE_OFFICER']);
 
-        const query = `
-            INSERT INTO system_users (username, full_name, email, role, password_hash, is_active)
-            VALUES ($1, $2, $3, $4, $5, TRUE)
-            RETURNING user_id, username, role;
-        `;
-        const result = await pool.query(query, [username, full_name, email, role, hashedPassword]);
+        if (!username || !fullName || !email || !password || !role) {
+            return res.status(400).json({ status: 'ERROR', message: 'full_name, username, email, password, and role are required.' });
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ status: 'ERROR', message: 'A valid email address is required.' });
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ status: 'ERROR', message: 'Initial password must be at least 8 characters.' });
+        }
+        if (!allowedRoles.has(role)) {
+            return res.status(400).json({ status: 'ERROR', message: 'Unsupported operator role.' });
+        }
+
+        const columns = await getSystemUserColumns();
+        const usernameExpression = getSystemUsernameExpression(columns);
+        const requiredColumns = ['full_name', 'email', 'role', 'password_hash'];
+        if (requiredColumns.some(column => !columns.has(column)) || !columns.has('is_active') && !columns.has('status')) {
+            throw new Error('system_users is missing required operator account columns.');
+        }
+
+        const existing = await pool.query(
+            `SELECT user_id FROM system_users WHERE LOWER(${usernameExpression}) = LOWER($1) LIMIT 1`,
+            [username]
+        );
+        if (existing.rows.length) {
+            return res.status(409).json({ status: 'ERROR', message: 'Username is already in use.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const operatorValues = {
+            username,
+            operator_username: username,
+            full_name: fullName,
+            email,
+            role,
+            password_hash: hashedPassword,
+            is_active: true,
+            status: 'ACTIVE'
+        };
+        const insertColumns = Object.keys(operatorValues).filter(column => columns.has(column));
+        const values = insertColumns.map(column => operatorValues[column]);
+        const placeholders = values.map((_, index) => `$${index + 1}`);
+        const result = await pool.query(
+            `INSERT INTO system_users (${insertColumns.join(', ')})
+             VALUES (${placeholders.join(', ')})
+             RETURNING user_id`,
+            values
+        );
+        const operator = {
+            user_id: result.rows[0].user_id,
+            username,
+            full_name: fullName,
+            email,
+            role,
+            is_active: true,
+            status: 'ACTIVE'
+        };
         await logAuditTrail(req, {
-            actionType: 'SYSTEM_USER_CREATED',
+            actionType: 'USER_CREATED',
             targetModule: 'SYSTEM_USERS',
-            targetId: result.rows[0].user_id,
-            description: `Created system user ${username}`
+            targetId: operator.user_id,
+            description: `Created system user ${username}`,
+            details: { username, role, status: 'ACTIVE' }
         });
 
-        res.status(201).json({ status: 'SUCCESS', message: 'User created successfully', user: result.rows[0] });
+        res.status(201).json({ status: 'SUCCESS', message: 'User created successfully', user: operator });
     } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({ status: 'ERROR', message: 'Username or email is already in use.' });
+        }
+        console.error('Error creating system user:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+app.put('/v1/users/:username/status', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
+    try {
+        const username = String(req.params.username || '').trim();
+        const requestedStatus = req.body.status ? String(req.body.status).toUpperCase() : '';
+        if (requestedStatus && !['ACTIVE', 'DISABLED'].includes(requestedStatus)) {
+            return res.status(400).json({ status: 'ERROR', message: 'Status must be ACTIVE or DISABLED.' });
+        }
+
+        const columns = await getSystemUserColumns();
+        const usernameExpression = getSystemUsernameExpression(columns);
+        const statusExpression = getSystemUserStatusExpression(columns);
+        const userResult = await pool.query(
+            `SELECT user_id, ${usernameExpression} AS username, ${statusExpression} AS status
+             FROM system_users
+             WHERE LOWER(${usernameExpression}) = LOWER($1)
+             LIMIT 1`,
+            [username]
+        );
+        if (!userResult.rows.length) {
+            return res.status(404).json({ status: 'ERROR', message: 'Operator not found.' });
+        }
+
+        const operator = userResult.rows[0];
+        const nextStatus = requestedStatus || (operator.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE');
+        if (nextStatus === 'DISABLED' && String(operator.user_id) === String(req.user.user_id)) {
+            return res.status(400).json({ status: 'ERROR', message: 'You cannot disable your own account.' });
+        }
+
+        const updateParts = [];
+        const values = [];
+        if (columns.has('is_active')) {
+            values.push(nextStatus === 'ACTIVE');
+            updateParts.push(`is_active = $${values.length}`);
+        }
+        if (columns.has('status')) {
+            values.push(nextStatus);
+            updateParts.push(`status = $${values.length}`);
+        }
+        values.push(operator.user_id);
+        const updated = await pool.query(
+            `UPDATE system_users
+             SET ${updateParts.join(', ')}
+             WHERE user_id = $${values.length}
+             RETURNING user_id`,
+            values
+        );
+        if (!updated.rows.length) {
+            return res.status(404).json({ status: 'ERROR', message: 'Operator not found.' });
+        }
+
+        await logAuditTrail(req, {
+            actionType: 'USER_STATUS_UPDATED',
+            targetModule: 'SYSTEM_USERS',
+            targetId: operator.user_id,
+            description: `Set operator ${operator.username} status to ${nextStatus}`,
+            details: { username: operator.username, previous_status: operator.status, status: nextStatus }
+        });
+        res.json({
+            status: 'SUCCESS',
+            message: `Operator ${nextStatus.toLowerCase()} successfully.`,
+            user: { user_id: operator.user_id, username: operator.username, status: nextStatus, is_active: nextStatus === 'ACTIVE' }
+        });
+    } catch (err) {
+        console.error('Error updating operator status:', err.message);
         res.status(500).json({ status: 'ERROR', message: err.message });
     }
 });
@@ -925,14 +1120,14 @@ app.post('/v1/users', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (
 // ============================================================
 // SYSADMIN CREATE USER ACCOUNT ENDPOINT
 // ============================================================
-app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
+app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
     try {
         const { username, full_name, role, password } = req.body;
-        if (!username || !full_name || !role) {
-            return res.status(400).json({ status: 'ERROR', message: 'username, full_name, and role are required' });
+        if (!username || !full_name || !role || !password) {
+            return res.status(400).json({ status: 'ERROR', message: 'username, full_name, role, and password are required' });
         }
 
-        const hashedPassword = await bcrypt.hash(password || 'BicPass2026!', 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
         const result = await pool.query(
             `INSERT INTO system_users (username, full_name, role, password_hash, is_active)
              VALUES ($1, $2, $3, $4, TRUE)
@@ -941,7 +1136,7 @@ app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRoles('SYSTEM_
         );
 
         await logAuditTrail(req, {
-            actionType: 'SYSTEM_USER_CREATED',
+            actionType: 'USER_CREATED',
             targetModule: 'SYSTEM_USERS',
             targetId: result.rows[0].user_id,
             description: `Provisioned system user ${username}`
@@ -954,7 +1149,7 @@ app.post('/v1/sysadmin/users/create', authenticateToken, authorizeRoles('SYSTEM_
     }
 });
 
-app.put('/v1/users/:userId/password', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
+app.put('/v1/users/:userId/password', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const { new_password } = req.body;
@@ -980,7 +1175,7 @@ app.put('/v1/users/:userId/password', authenticateToken, authorizeRoles('SYSTEM_
 // ============================================================
 // SYSADMIN RESET USER PASSWORD POST ENDPOINT
 // ============================================================
-app.post('/v1/sysadmin/users/:userId/reset-password', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
+app.post('/v1/sysadmin/users/:userId/reset-password', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const { new_password } = req.body;
