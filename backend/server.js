@@ -2004,19 +2004,14 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
 // PHASE 4: AUTOMATED DAILY DATABASE BACKUP (MIDNIGHT CRON)
 // ============================================================
 cron.schedule('0 0 * * *', async () => {
-    console.log('⏰ Running automated midnight database backup...');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.join(__dirname, 'backups');
-    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-    
-    const backupPath = path.join(backupDir, `bic_backup_${timestamp}.sql`);
-    const pgDumpCmd = `pg_dump -U ${process.env.DB_USER || 'postgres'} -d ${process.env.DB_NAME || 'bic_casemanagement'} -f "${backupPath}"`;
-
-    exec(pgDumpCmd, { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } }, (error) => {
+    console.log('Running automated midnight database backup...');
+    const backupScriptPath = path.join(__dirname, 'scripts', 'backup_db.js');
+    exec(`"${process.execPath}" "${backupScriptPath}"`, { cwd: __dirname }, (error, stdout, stderr) => {
         if (error) {
-            console.error('❌ Automated Backup Failed:', error.message);
+            console.error('Automated backup failed:', (stderr || error.message).trim());
         } else {
-            console.log(`✅ Automated Backup Saved: ${backupPath}`);
+            console.log(stdout.trim() || 'Automated database backup completed.');
+            if (stderr.trim()) console.warn(stderr.trim());
         }
     });
 });

@@ -25,6 +25,26 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        .property-tag-modal { display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, 0.72); }
+        .property-tag-modal.is-open { display: flex; }
+        .property-tag-dialog { width: min(100%, 34rem); padding: 1.25rem; border-radius: 0.5rem; background: #fff; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.28); }
+        .property-tag-label { width: 100%; min-height: 16rem; box-sizing: border-box; border: 1px solid #cbd5e1; padding: 1rem; color: #0f172a; background: #fff; }
+        .property-tag-header { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid #b80d19; }
+        .property-tag-header img { width: 3.25rem; height: 3.25rem; object-fit: contain; }
+        .property-tag-details { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: center; padding-top: 0.75rem; }
+        .property-tag-qr { width: 8rem; height: 8rem; }
+        @media print {
+            @page { size: 100mm 70mm; margin: 0; }
+            html, body { width: 100mm; height: 70mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+            body > :not(#propertyTagPrintModal) { display: none !important; }
+            #propertyTagPrintModal { display: flex !important; position: static !important; width: 100mm; height: 70mm; padding: 0 !important; background: #fff !important; }
+            #propertyTagPrintModal .property-tag-dialog { width: 100%; padding: 0; border-radius: 0; box-shadow: none; }
+            #propertyTagPrintModal .property-tag-label { width: 100mm; height: 70mm; min-height: 0; padding: 5mm; border: 0; }
+            #propertyTagPrintModal .property-tag-actions { display: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-brand-bg font-sans text-slate-800 antialiased min-h-screen">
 
@@ -459,11 +479,11 @@
                                 <span>Deportation, Voluntary Return & Removal Pipeline</span>
                             </h3>
                             <div class="flex items-center space-x-2">
-                                <button onclick="exportModuleCsv('deportations')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                                <button data-rbac-export="true" onclick="exportModuleCsv('deportations')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
                                     <i class="fa-solid fa-file-csv"></i>
                                     <span>Export CSV</span>
                                 </button>
-                                <button onclick="openDeportationModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <button data-rbac-write="true" onclick="openDeportationModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                                     <i class="fa-solid fa-plus text-[10px]"></i>
                                     <span>New Removal Dispatch</span>
                                 </button>
@@ -576,7 +596,7 @@
                                 <span>System Audit Trail & Operational Logs</span>
                             </h3>
                             <div class="flex items-center space-x-2">
-                                <button onclick="exportModuleCsv('audit-trail')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                                <button data-rbac-export="true" onclick="exportModuleCsv('audit-trail')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
                                     <i class="fa-solid fa-file-csv"></i>
                                     <span>Export CSV</span>
                                 </button>
@@ -648,11 +668,11 @@
                                 <p class="text-xs text-slate-500">Log surrendered valuables, luggage locker assignments, and generate QR bag tags.</p>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <button onclick="exportModuleCsv('property-ledger')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                                <button data-rbac-export="true" onclick="exportModuleCsv('property-ledger')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
                                     <i class="fa-solid fa-file-csv"></i>
                                     <span>Export CSV</span>
                                 </button>
-                                <button onclick="openAddPropertyModal()" class="bg-brand-navy hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <button data-rbac-write="true" onclick="openAddPropertyModal()" class="bg-brand-navy hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                                     <i class="fa-solid fa-plus text-[10px]"></i>
                                     <span>Add Property Item</span>
                                 </button>
@@ -667,11 +687,12 @@
                                         <th class="py-3 px-4">Tag / Item ID</th>
                                         <th class="py-3 px-4">Category</th>
                                         <th class="py-3 px-4">Locker #</th>
-                                        <th class="py-3 px-4 text-right">Custody Status</th>
+                                        <th class="py-3 px-4">Custody Status</th>
+                                        <th class="py-3 px-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="propertyTableBody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700">
-                                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Loading property registry...</td></tr>
+                                    <tr><td colspan="7" class="p-4 text-center text-slate-400">Loading property registry...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1520,6 +1541,7 @@
         let intakeTrendChartInstance = null;
         let cachedCompoundsList = [];
         let cachedCasesList = [];
+        let cachedPropertyLedger = [];
 
         function getAuthHeaders() {
             return {
@@ -1527,6 +1549,41 @@
                 'Authorization': `Bearer ${authToken}`
             };
         }
+
+        function getAuthenticatedUserRole() {
+            const token = localStorage.getItem('bic_auth_token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                    if (payload.role) return String(payload.role).toUpperCase();
+                } catch (err) {}
+            }
+
+            const roleKey = localStorage.getItem('bic_user_role');
+            if (roleKey) return roleKey.toUpperCase();
+
+            try {
+                const user = JSON.parse(localStorage.getItem('bic_active_user') || 'null');
+                return user?.role?.toUpperCase() || '';
+            } catch (err) {
+                return '';
+            }
+        }
+
+        window.applyRbacUiRestrictions = function() {
+            const role = getAuthenticatedUserRole();
+            const canExport = ['SYSTEM_ADMIN', 'DUTY_MANAGER'].includes(role);
+            document.querySelectorAll('[data-rbac-export]').forEach(button => {
+                button.hidden = !canExport;
+                button.disabled = !canExport;
+            });
+
+            const isReadOnlyRole = ['AUDITOR', 'CASE_OFFICER'].includes(role);
+            document.querySelectorAll('[data-rbac-write]').forEach(button => {
+                button.hidden = isReadOnlyRole;
+                button.disabled = isReadOnlyRole;
+            });
+        };
 
         window.toggleUserDropdown = function() {
             const panel = document.getElementById('userDropdownPanel');
@@ -1575,6 +1632,7 @@
         window.applyRolePermissions = function(user) {
             if (!user || !user.role) return;
             const role = user.role.toUpperCase();
+            localStorage.setItem('bic_user_role', role);
             const allowedTabs = rolePermissionsByRole[role] || ['overview'];
 
             updateUserDropdown(user);
@@ -1590,6 +1648,7 @@
             const activeView = document.querySelector('[id^="view-"]:not(.hidden)');
             const currentTab = activeView?.id.replace('view-', '') || 'overview';
             if (!allowedTabs.includes(currentTab)) switchTab('overview');
+            window.applyRbacUiRestrictions();
         };
 
         async function handleAuthLogin(event) {
@@ -1610,6 +1669,7 @@
                     authToken = result.token;
                     localStorage.setItem('bic_auth_token', authToken);
                     localStorage.setItem('bic_active_user', JSON.stringify(result.user));
+                    localStorage.setItem('bic_user_role', result.user.role.toUpperCase());
 
                     document.getElementById('loginScreen').classList.add('hidden');
                     document.getElementById('appWorkspace').classList.remove('hidden');
@@ -1630,6 +1690,7 @@
         function handleLogout() {
             localStorage.removeItem('bic_auth_token');
             localStorage.removeItem('bic_active_user');
+            localStorage.removeItem('bic_user_role');
             authToken = null;
 
             document.getElementById('appWorkspace').classList.add('hidden');
@@ -1736,6 +1797,7 @@
             else if (tabKey === 'property') loadPropertyRegistry();
             else if (tabKey === 'visitors') loadVisitorRegistry();
             else if (tabKey === 'incidents') loadIncidentRegistry();
+            window.applyRbacUiRestrictions();
         }
 
         function openIntakeModal() {
@@ -2345,8 +2407,9 @@
                 if (!res.ok) throw new Error(`Property ledger request failed (HTTP ${res.status}).`);
                 const data = await res.json();
                 const ledger = Array.isArray(data.ledger) ? data.ledger : Array.isArray(data.items) ? data.items : [];
+                cachedPropertyLedger = ledger;
                 if (!ledger.length) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No property ledger entries found.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">No property ledger entries found.</td></tr>';
                     return;
                 }
                 tableBody.innerHTML = ledger.map(item => `
@@ -2356,18 +2419,96 @@
                             <td class="py-3 px-4 font-mono text-brand-red font-bold">${item.ledger_id || 'N/A'}</td>
                             <td class="py-3 px-4 font-bold">${item.item_category || 'N/A'}</td>
                             <td class="py-3 px-4 font-bold">${item.storage_locker_ref || 'N/A'}</td>
-                            <td class="py-3 px-4 text-right">
+                            <td class="py-3 px-4">
                                 <span class="px-2 py-1 rounded bg-slate-100 text-slate-700 font-bold text-[10px]">${item.custody_status || 'IN_CUSTODY'}</span>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <button type="button" onclick="window.printPropertyTag(decodeURIComponent(this.dataset.itemId))" data-item-id="${encodeURIComponent(String(item.ledger_id || ''))}" class="bg-brand-navy hover:bg-slate-800 text-white px-2.5 py-1 rounded font-bold text-[11px] inline-flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-qrcode"></i><span>Print Tag</span>
+                                </button>
                             </td>
                         </tr>
                     `).join('');
             } catch (err) {
                 console.error('Error loading property ledger:', err);
-                tableBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Failed to load property ledger.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-red-500">Failed to load property ledger.</td></tr>';
             }
         };
 
         const loadPropertyRegistry = window.loadPropertyLedger;
+
+        window.closePropertyTagModal = function() {
+            document.getElementById('propertyTagPrintModal')?.classList.remove('is-open');
+        };
+
+        window.printPropertyTag = async function(itemId) {
+            const item = cachedPropertyLedger.find(record => String(record.ledger_id) === String(itemId));
+            if (!item) {
+                alert('Property ledger item not found. Refresh the Property Custody Ledger and try again.');
+                return;
+            }
+
+            const escapeTagText = value => String(value ?? 'N/A').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+            const poiName = [item.surname, item.given_names].filter(Boolean).join(', ') || 'N/A';
+            let modal = document.getElementById('propertyTagPrintModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'propertyTagPrintModal';
+                modal.className = 'property-tag-modal';
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <section class="property-tag-dialog" role="dialog" aria-modal="true" aria-labelledby="propertyTagTitle">
+                    <div class="property-tag-actions flex justify-end space-x-2 mb-3">
+                        <button type="button" onclick="window.closePropertyTagModal()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded">Close</button>
+                        <button type="button" onclick="window.print()" class="px-3 py-2 bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold rounded"><i class="fa-solid fa-print mr-1"></i>Print Tag</button>
+                    </div>
+                    <article class="property-tag-label">
+                        <header class="property-tag-header">
+                            <img src="assets/ICSA LOGO.png" alt="PNGICSA" onerror="this.onerror=null;this.src='assets/ICSA LOGO1.png'">
+                            <div>
+                                <h2 class="text-xs font-black uppercase leading-tight">Papua New Guinea Immigration & Citizenship Service Authority</h2>
+                                <p class="text-[10px] font-bold text-slate-600 uppercase mt-1">Bomana Immigration Centre</p>
+                                <p id="propertyTagTitle" class="text-[9px] font-extrabold text-brand-red uppercase mt-1">Official Property Custody Tag</p>
+                            </div>
+                        </header>
+                        <div class="property-tag-details">
+                            <div class="space-y-2 text-[11px]">
+                                <p><strong class="block text-[9px] uppercase text-slate-500">POI Name</strong>${escapeTagText(poiName)}</p>
+                                <p><strong class="block text-[9px] uppercase text-slate-500">Case File Reference</strong>${escapeTagText(item.bic_case_file_number || 'PENDING')}</p>
+                                <p><strong class="block text-[9px] uppercase text-slate-500">Item Category</strong>${escapeTagText(item.item_category)}</p>
+                                <p><strong class="block text-[9px] uppercase text-slate-500">Locker Reference</strong>${escapeTagText(item.storage_locker_ref)}</p>
+                                <p class="font-mono text-[8px] break-all">Tag ID: ${escapeTagText(item.ledger_id)}</p>
+                            </div>
+                            <canvas class="property-tag-qr" aria-label="QR code for property tag"></canvas>
+                        </div>
+                    </article>
+                </section>
+            `;
+            modal.classList.add('is-open');
+
+            try {
+                if (!window.QRCode || typeof window.QRCode.toCanvas !== 'function') {
+                    throw new Error('The QR code generator did not load. Check the network connection and retry.');
+                }
+                const canvas = modal.querySelector('.property-tag-qr');
+                await window.QRCode.toCanvas(canvas, String(item.ledger_id), {
+                    width: 128,
+                    margin: 1,
+                    errorCorrectionLevel: 'H'
+                });
+                window.print();
+            } catch (err) {
+                console.error('Failed to generate property tag QR code:', err);
+                alert(err.message || 'Failed to generate the property tag QR code.');
+            }
+        };
 
         window.generateBic01Pdf = async function(pacirId) {
             if (!pacirId) {
@@ -2820,6 +2961,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            window.applyRbacUiRestrictions();
             if (authToken) {
                 const user = JSON.parse(localStorage.getItem('bic_active_user'));
                 if (user) {
@@ -2829,6 +2971,7 @@
                     document.getElementById('sidebarRoleLabel').innerText = user.role.replace('_', ' ');
 
                     switchTab('overview');
+                    window.applyRbacUiRestrictions();
                     refreshAllData();
                 }
             }
