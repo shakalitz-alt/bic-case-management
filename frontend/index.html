@@ -327,6 +327,13 @@
                         </div>
                     </div>
 
+                    <div class="bg-white/80 p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Monthly Intake Trend</h3>
+                        <div class="h-64 relative">
+                            <canvas id="intakeTrendChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white/70 backdrop-blur-xs p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
@@ -451,10 +458,16 @@
                                 <i class="fa-solid fa-plane-departure mr-2 text-brand-red"></i>
                                 <span>Deportation, Voluntary Return & Removal Pipeline</span>
                             </h3>
-                            <button onclick="openDeportationModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-                                <i class="fa-solid fa-plus text-[10px]"></i>
-                                <span>New Removal Dispatch</span>
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="exportModuleCsv('deportations')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-file-csv"></i>
+                                    <span>Export CSV</span>
+                                </button>
+                                <button onclick="openDeportationModal()" class="bg-brand-red hover:bg-brand-darkRed text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>New Removal Dispatch</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
@@ -562,10 +575,16 @@
                                 <i class="fa-solid fa-shield-halved mr-2 text-brand-red"></i>
                                 <span>System Audit Trail & Operational Logs</span>
                             </h3>
-                            <button onclick="loadAuditLogs()" class="bg-brand-navy hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
-                                <i class="fa-solid fa-arrows-rotate"></i>
-                                <span>Refresh Logs</span>
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="exportModuleCsv('audit-trail')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-file-csv"></i>
+                                    <span>Export CSV</span>
+                                </button>
+                                <button onclick="loadAuditLogs()" class="bg-brand-navy hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                    <span>Refresh Logs</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
@@ -628,10 +647,16 @@
                                 <h3 class="text-sm font-bold text-slate-900 uppercase">POI Personal Belongings & Property Custody</h3>
                                 <p class="text-xs text-slate-500">Log surrendered valuables, luggage locker assignments, and generate QR bag tags.</p>
                             </div>
-                            <button onclick="openAddPropertyModal()" class="bg-brand-navy hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
-                                <i class="fa-solid fa-plus text-[10px]"></i>
-                                <span>Add Property Item</span>
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="exportModuleCsv('property-ledger')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-file-csv"></i>
+                                    <span>Export CSV</span>
+                                </button>
+                                <button onclick="openAddPropertyModal()" class="bg-brand-navy hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>Add Property Item</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-xs">
@@ -1492,6 +1517,7 @@
         let authToken = localStorage.getItem('bic_auth_token') || null;
         let riskChartInstance = null;
         let capacityChartInstance = null;
+        let intakeTrendChartInstance = null;
         let cachedCompoundsList = [];
         let cachedCasesList = [];
 
@@ -1701,7 +1727,7 @@
 
             // Trigger tab-specific loaders
             if (tabKey === 'deportations') loadDeportationsPipeline();
-            else if (tabKey === 'overview') { loadAnalytics(); loadDashboardOverviewMetrics(); }
+            else if (tabKey === 'overview') { loadAnalytics(); loadDashboardOverviewMetrics(); window.renderDashboardAnalytics(); }
             else if (tabKey === 'admissions') loadAdmissionsQueue();
             else if (tabKey === 'compounds') loadCompoundOccupancy();
             else if (tabKey === 'pois') loadCasesRegistry();
@@ -1884,6 +1910,67 @@
                 console.error('Failed to load analytics:', err);
             }
         }
+
+        window.renderDashboardAnalytics = async function() {
+            try {
+                const res = await fetch(`${API_BASE}/analytics/dashboard`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error(`Dashboard analytics request failed (HTTP ${res.status}).`);
+                const result = await res.json();
+                if (result.status !== 'SUCCESS' || !result.data) return;
+
+                const trend = result.data.monthly_intake_trends || [];
+                const canvas = document.getElementById('intakeTrendChart');
+                if (!canvas) return;
+                if (intakeTrendChartInstance) intakeTrendChartInstance.destroy();
+                intakeTrendChartInstance = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: trend.map(item => new Date(`${item.month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' })),
+                        datasets: [{
+                            label: 'Intakes',
+                            data: trend.map(item => Number(item.count) || 0),
+                            borderColor: '#b80d19',
+                            backgroundColor: 'rgba(184, 13, 25, 0.12)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to load dashboard analytics:', err);
+            }
+        };
+
+        window.exportModuleCsv = async function(moduleName) {
+            const supportedModules = ['audit-trail', 'property-ledger', 'deportations'];
+            if (!supportedModules.includes(moduleName)) {
+                alert('Unsupported CSV export module.');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/analytics/export/${encodeURIComponent(moduleName)}`, { headers: getAuthHeaders() });
+                if (!res.ok) {
+                    const message = await res.text();
+                    throw new Error(message || `CSV export failed (HTTP ${res.status}).`);
+                }
+                const blobUrl = URL.createObjectURL(await res.blob());
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `${moduleName}-${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error('CSV export failed:', err);
+                alert(`CSV export failed: ${err.message}`);
+            }
+        };
 
         async function loadDashboardOverviewMetrics() {
             try {
@@ -2719,6 +2806,7 @@
             loadAdmissionsQueue();
             loadAnalytics();
             loadDashboardOverviewMetrics();
+            window.renderDashboardAnalytics();
             loadCasesRegistry();
             loadCompoundOccupancy();
             loadDeportationsPipeline();

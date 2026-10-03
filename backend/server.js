@@ -278,6 +278,119 @@ app.get('/v1/cases', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTA
 // ==========================================
 // 3. EXECUTIVE ANALYTICS SUMMARY ENDPOINT
 // ==========================================
+app.get('/v1/analytics/dashboard', authenticateToken, async (req, res) => {
+    try {
+        const [summaryResult, intakeResult, medicalResult] = await Promise.all([
+            pool.query(`
+                SELECT
+                    (SELECT COUNT(*)::int FROM admission_decisions
+                     WHERE UPPER(COALESCE(decision_status, '')) NOT IN ('RELEASED', 'DEPORTED', 'REMOVED', 'CLOSED')) AS active_inmates,
+                    (SELECT COUNT(*)::int FROM poi_deportations
+                     WHERE UPPER(COALESCE(logistics_status, '')) IN ('COMPLETED', 'DEPORTED', 'DEPARTED')) AS deported_count,
+                    (SELECT COUNT(*)::int FROM admission_decisions
+                     WHERE UPPER(COALESCE(decision_status, '')) LIKE '%RELEASE%') AS released_count,
+                    (SELECT COUNT(*)::int FROM pacir_reports) AS total_cases
+            `),
+            pool.query(`
+                WITH months AS (
+                    SELECT generate_series(
+                        date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
+                        date_trunc('month', CURRENT_DATE),
+                        INTERVAL '1 month'
+                    ) AS month_start
+                ), intakes AS (
+                    SELECT date_trunc('month', submitted_at) AS month_start, COUNT(*)::int AS intake_count
+                    FROM pacir_reports
+                    WHERE submitted_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
+                      AND submitted_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+                    GROUP BY date_trunc('month', submitted_at)
+                )
+                SELECT to_char(months.month_start, 'YYYY-MM') AS month,
+                       COALESCE(intakes.intake_count, 0)::int AS count
+                FROM months
+                LEFT JOIN intakes USING (month_start)
+                ORDER BY months.month_start
+            `),
+            pool.query(`
+                SELECT
+                    COUNT(*)::int AS total_screenings,
+                    COUNT(*) FILTER (WHERE emergency_referral_required)::int AS emergency_referrals,
+                    COUNT(*) FILTER (WHERE suicide_watch_active)::int AS suicide_watch,
+                    COUNT(*) FILTER (WHERE isolation_required)::int AS isolation_required,
+                    COUNT(*) FILTER (WHERE fit_to_travel)::int AS fit_to_travel
+                FROM poi_medical_records
+            `)
+        ]);
+
+        res.json({
+            status: 'SUCCESS',
+            data: {
+                ...summaryResult.rows[0],
+                monthly_intake_trends: intakeResult.rows,
+                medical_stats: medicalResult.rows[0]
+            }
+        });
+    } catch (err) {
+        console.error('Error fetching dashboard analytics:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+app.get('/v1/analytics/export/:module', authenticateToken, async (req, res) => {
+    const exports = {
+        'audit-trail': {
+            targetModule: 'AUDIT_LOGS',
+            query: 'SELECT * FROM audit_logs'
+        },
+        'property-ledger': {
+            targetModule: 'POI_PROPERTY_LEDGER',
+            query: `SELECT l.*, p.pacir_ref_number, p.bic_case_file_number, p.surname, p.given_names
+                    FROM poi_property_ledger l
+                    JOIN pacir_reports p ON p.pacir_id = l.pacir_id
+                    ORDER BY l.intake_date DESC, l.created_at DESC`
+        },
+        deportations: {
+            targetModule: 'POI_DEPORTATIONS',
+            query: `SELECT d.*, p.surname, p.given_names, p.nationality, p.passport_number, c.bic_case_file_number
+                    FROM poi_deportations d
+                    JOIN pacir_reports p ON d.pacir_id = p.pacir_id
+                    LEFT JOIN admission_decisions c ON p.pacir_id = c.pacir_id
+                    ORDER BY d.created_at DESC`
+        }
+    };
+    const exportConfig = exports[req.params.module];
+    if (!exportConfig) {
+        return res.status(404).json({ status: 'ERROR', message: 'Unsupported export module.' });
+    }
+
+    try {
+        const { rows, fields } = await pool.query(exportConfig.query);
+        await logAuditTrail(req, {
+            actionType: 'DATA_EXPORT',
+            targetModule: exportConfig.targetModule,
+            targetId: 'ALL',
+            description: `Exported ${rows.length} ${req.params.module} records as CSV`
+        });
+
+        const escapeCsv = value => {
+            let text = value === null || value === undefined
+                ? ''
+                : (typeof value === 'object' ? JSON.stringify(value) : String(value));
+            if (/^[=+\-@]/.test(text)) text = `'${text}`;
+            return `"${text.replace(/"/g, '""')}"`;
+        };
+        const columns = fields.map(field => field.name);
+        const csv = [columns.map(escapeCsv).join(','), ...rows.map(row => columns.map(column => escapeCsv(row[column])).join(','))].join('\r\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${req.params.module}-${new Date().toISOString().slice(0, 10)}.csv"`);
+        res.send(csv);
+    } catch (err) {
+        console.error(`Error exporting ${req.params.module}:`, err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
 app.get('/v1/analytics/summary', authenticateToken, authorizeRoles('SECURITY_OFFICER', 'INTAKE_OFFICER', 'CASE_OFFICER'), async (req, res) => {
     try {
         const riskQuery = `SELECT overall_calculated_risk AS risk_level, COUNT(*) AS count FROM risk_assessments GROUP BY overall_calculated_risk;`;
