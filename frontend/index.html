@@ -38,11 +38,11 @@
         @media print {
             @page { size: 100mm 70mm; margin: 0; }
             html, body { width: 100mm; height: 70mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
-            body > :not(#propertyTagPrintModal) { display: none !important; }
-            #propertyTagPrintModal { display: flex !important; position: static !important; width: 100mm; height: 70mm; padding: 0 !important; background: #fff !important; }
-            #propertyTagPrintModal .property-tag-dialog { width: 100%; padding: 0; border-radius: 0; box-shadow: none; }
-            #propertyTagPrintModal .property-tag-label { width: 100mm; height: 70mm; min-height: 0; padding: 5mm; border: 0; }
-            #propertyTagPrintModal .property-tag-actions { display: none !important; }
+            body > :not(#qrTagModal) { display: none !important; }
+            #qrTagModal { display: flex !important; position: static !important; width: 100mm; height: 70mm; padding: 0 !important; background: #fff !important; }
+            #qrTagModal .property-tag-dialog { width: 100%; padding: 0; border-radius: 0; box-shadow: none; }
+            #qrTagModal .property-tag-label { width: 100mm; height: 70mm; min-height: 0; padding: 5mm; border: 0; }
+            #qrTagModal .property-tag-actions { display: none !important; }
         }
     </style>
 </head>
@@ -519,7 +519,7 @@
                                 <span>Authorized Operators & RBAC Roles</span>
                             </h3>
                             <div class="flex items-center space-x-2">
-                                <button onclick="triggerManualBackup()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                                <button onclick="window.runManualBackup()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
                                     <i class="fa-solid fa-database"></i>
                                     <span>Run Manual Backup</span>
                                 </button>
@@ -2456,7 +2456,7 @@
         const loadPropertyRegistry = window.loadPropertyLedger;
 
         window.closePropertyTagModal = function() {
-            document.getElementById('propertyTagPrintModal')?.classList.remove('is-open');
+            document.getElementById('qrTagModal')?.classList.remove('is-open');
         };
 
         window.printPropertyTag = async function(itemId) {
@@ -2474,10 +2474,10 @@
                 "'": '&#39;'
             })[character]);
             const poiName = [item.surname, item.given_names].filter(Boolean).join(', ') || 'N/A';
-            let modal = document.getElementById('propertyTagPrintModal');
+            let modal = document.getElementById('qrTagModal');
             if (!modal) {
                 modal = document.createElement('div');
-                modal.id = 'propertyTagPrintModal';
+                modal.id = 'qrTagModal';
                 modal.className = 'property-tag-modal';
                 document.body.appendChild(modal);
             }
@@ -2499,12 +2499,12 @@
                         <div class="property-tag-details">
                             <div class="space-y-2 text-[11px]">
                                 <p><strong class="block text-[9px] uppercase text-slate-500">POI Name</strong>${escapeTagText(poiName)}</p>
-                                <p><strong class="block text-[9px] uppercase text-slate-500">Case File Reference</strong>${escapeTagText(item.bic_case_file_number || 'PENDING')}</p>
+                                <p><strong class="block text-[9px] uppercase text-slate-500">Case File Reference (PACIR ID)</strong>${escapeTagText(item.pacir_id)}</p>
                                 <p><strong class="block text-[9px] uppercase text-slate-500">Item Category</strong>${escapeTagText(item.item_category)}</p>
                                 <p><strong class="block text-[9px] uppercase text-slate-500">Locker Reference</strong>${escapeTagText(item.storage_locker_ref)}</p>
-                                <p class="font-mono text-[8px] break-all">Tag ID: ${escapeTagText(item.ledger_id)}</p>
+                                <p class="font-mono text-[8px] break-all">Item Tag GUID: ${escapeTagText(item.ledger_id)}</p>
                             </div>
-                            <canvas class="property-tag-qr" aria-label="QR code for property tag"></canvas>
+                            <canvas id="qrCanvas" class="property-tag-qr" aria-label="QR code for property tag"></canvas>
                         </div>
                     </article>
                 </section>
@@ -2515,8 +2515,13 @@
                 if (!window.QRCode || typeof window.QRCode.toCanvas !== 'function') {
                     throw new Error('The QR code generator did not load. Check the network connection and retry.');
                 }
-                const canvas = modal.querySelector('.property-tag-qr');
-                await window.QRCode.toCanvas(canvas, String(item.ledger_id), {
+                const canvas = document.getElementById('qrCanvas');
+                const qrPayload = JSON.stringify({
+                    itemId: String(item.ledger_id),
+                    pacirId: String(item.pacir_id),
+                    lockerRef: String(item.storage_locker_ref ?? '')
+                });
+                await window.QRCode.toCanvas(canvas, qrPayload, {
                     width: 128,
                     margin: 1,
                     errorCorrectionLevel: 'H'
@@ -3662,22 +3667,22 @@
         // ============================================================
         // MANUAL BACKUP TRIGGER HANDLER
         // ============================================================
-        window.triggerManualBackup = async function() {
-            const btn = document.querySelector("button[onclick*='triggerManualBackup']");
+        window.runManualBackup = async function() {
+            const btn = document.querySelector("button[onclick*='runManualBackup']");
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generating Backup...';
             }
 
             try {
-                const res = await fetch(`${API_BASE}/sysadmin/backup`, {
+                const res = await fetch(`${API_BASE}/admin/backup`, {
                     method: 'POST',
                     headers: getAuthHeaders()
                 });
                 const result = await res.json();
 
-                if (result.status === 'SUCCESS') {
-                    alert(`Manual Database Backup Completed Successfully!\nFilename: ${result.filename || result.backup_file || 'bic_backup_' + Date.now() + '.json'}`);
+                if (res.ok && result.status === 'SUCCESS') {
+                    alert(`Manual Database Backup Completed Successfully!\nFilename: ${result.filename}\nTimestamp: ${result.timestamp}`);
                 } else {
                     alert(`Backup Failed: ${result.message}`);
                 }
@@ -3691,6 +3696,8 @@
                 }
             }
         };
+
+        window.triggerManualBackup = window.runManualBackup;
 
         window.syncLiveFeeds = async function() {
             const btn = document.querySelector("button[onclick*='syncLiveFeeds']");

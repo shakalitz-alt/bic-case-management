@@ -25,7 +25,7 @@ function removeExpiredBackups(now = Date.now()) {
     }
 }
 
-function runBackup() {
+async function runBackup() {
     const settings = {
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
@@ -53,36 +53,44 @@ function runBackup() {
     fs.mkdirSync(backupDir, { recursive: true });
     removeExpiredBackups();
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(backupDir, `bic_casemanagement_${timestamp}.sql`);
+    const generatedAt = new Date();
+    const timestamp = generatedAt.toISOString();
+    const fileTimestamp = timestamp.replace(/[:.]/g, '-');
+    const filename = `bic_casemanagement_${fileTimestamp}.sql`;
+    const backupPath = path.join(backupDir, filename);
     const command = `pg_dump --format=plain --file=${quoteShellArgument(backupPath)}`;
 
-    exec(command, {
-        env: {
-            ...process.env,
-            PGPASSWORD: settings.password,
-            PGHOST: settings.host,
-            PGPORT: settings.port,
-            PGDATABASE: settings.database,
-            PGUSER: settings.user
-        },
-        maxBuffer: 10 * 1024 * 1024
-    }, (error, stdout, stderr) => {
-        if (error) {
-            if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
-            console.error('Database backup failed:', (stderr || error.message).trim());
-            process.exitCode = 1;
-            return;
-        }
-        console.log(`Database backup saved: ${backupPath}`);
-        if (stderr.trim()) console.warn(stderr.trim());
+    return new Promise((resolve, reject) => {
+        exec(command, {
+            env: {
+                ...process.env,
+                PGPASSWORD: settings.password,
+                PGHOST: settings.host,
+                PGPORT: settings.port,
+                PGDATABASE: settings.database,
+                PGUSER: settings.user
+            },
+            maxBuffer: 10 * 1024 * 1024
+        }, (error, stdout, stderr) => {
+            if (error) {
+                if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+                reject(new Error((stderr || error.message).trim()));
+                return;
+            }
+            resolve({ filename, timestamp, path: backupPath });
+        });
     });
 }
 
-try {
-    fs.mkdirSync(backupDir, { recursive: true });
-    runBackup();
-} catch (error) {
-    console.error('Database backup failed:', error.message);
-    process.exitCode = 1;
+module.exports = { runBackup };
+
+if (require.main === module) {
+    runBackup()
+        .then(({ filename, timestamp }) => {
+            console.log(`Database backup saved: ${filename} (${timestamp})`);
+        })
+        .catch(error => {
+            console.error('Database backup failed:', error.message);
+            process.exitCode = 1;
+        });
 }

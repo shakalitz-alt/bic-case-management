@@ -10,7 +10,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cron = require('node-cron');
-const { exec } = require('child_process');
+const { runBackup } = require('./scripts/backup_db');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -1215,7 +1215,29 @@ app.post('/v1/sysadmin/users/:userId/reset-password', authenticateToken, authori
     }
 });
 
-app.post('/v1/sysadmin/backup', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), async (req, res) => {
+app.post('/v1/admin/backup', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
+    try {
+        const backup = await runBackup();
+        await logAuditTrail(req, {
+            actionType: 'MANUAL_DB_BACKUP',
+            targetModule: 'BACKUPS',
+            targetId: backup.filename,
+            description: `Created manual database backup ${backup.filename}`,
+            details: { filename: backup.filename, timestamp: backup.timestamp }
+        });
+        res.json({
+            status: 'SUCCESS',
+            message: 'Database backup completed successfully.',
+            filename: backup.filename,
+            timestamp: backup.timestamp
+        });
+    } catch (err) {
+        console.error('Error executing manual database backup:', err.message);
+        res.status(500).json({ status: 'ERROR', message: err.message });
+    }
+});
+
+app.post('/v1/sysadmin/backup', authenticateToken, authorizeRoles('SYSTEM_ADMIN'), requireExactSystemAdmin, async (req, res) => {
     try {
         const safeQuery = async (tableName) => {
             try {
@@ -1283,7 +1305,7 @@ app.post('/v1/sysadmin/backup', authenticateToken, authorizeRoles('SYSTEM_ADMIN'
         fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
         const totalRecords = Object.values(backupData.counts).reduce((total, count) => total + count, 0);
         await logAuditTrail(req, {
-            actionType: 'MANUAL_BACKUP_CREATED',
+            actionType: 'MANUAL_DB_BACKUP',
             targetModule: 'BACKUPS',
             targetId: fileName,
             description: `Created manual database backup ${fileName}`,
@@ -2200,15 +2222,12 @@ app.get('/v1/reports/executive-briefing', authenticateToken, async (req, res) =>
 // ============================================================
 cron.schedule('0 0 * * *', async () => {
     console.log('Running automated midnight database backup...');
-    const backupScriptPath = path.join(__dirname, 'scripts', 'backup_db.js');
-    exec(`"${process.execPath}" "${backupScriptPath}"`, { cwd: __dirname }, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Automated backup failed:', (stderr || error.message).trim());
-        } else {
-            console.log(stdout.trim() || 'Automated database backup completed.');
-            if (stderr.trim()) console.warn(stderr.trim());
-        }
-    });
+    try {
+        const backup = await runBackup();
+        console.log(`Automated database backup saved: ${backup.filename} (${backup.timestamp})`);
+    } catch (err) {
+        console.error('Automated backup failed:', err.message);
+    }
 });
 
 // ==========================================
