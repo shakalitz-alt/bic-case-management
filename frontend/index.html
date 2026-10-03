@@ -33,8 +33,7 @@
         .property-tag-label { width: 100%; min-height: 16rem; box-sizing: border-box; border: 1px solid #cbd5e1; padding: 1rem; color: #0f172a; background: #fff; }
         .property-tag-header { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid #b80d19; }
         .property-tag-header img { width: 3.25rem; height: 3.25rem; object-fit: contain; }
-        .property-tag-details { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: center; padding-top: 0.75rem; }
-        .property-tag-qr { width: 8rem; height: 8rem; }
+        #qrCanvasContainer svg { width: 8rem; height: 8rem; }
         @media print {
             @page { size: 100mm 70mm; margin: 0; }
             html, body { width: 100mm; height: 70mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
@@ -2426,6 +2425,7 @@
                 const data = await res.json();
                 const ledger = Array.isArray(data.ledger) ? data.ledger : Array.isArray(data.items) ? data.items : [];
                 cachedPropertyLedger = ledger;
+                window.propertyLedgerData = ledger;
                 if (!ledger.length) {
                     tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">No property ledger entries found.</td></tr>';
                     return;
@@ -2441,7 +2441,7 @@
                                 <span class="px-2 py-1 rounded bg-slate-100 text-slate-700 font-bold text-[10px]">${item.custody_status || 'IN_CUSTODY'}</span>
                             </td>
                             <td class="py-3 px-4 text-right">
-                                <button type="button" onclick="window.printPropertyTag(decodeURIComponent(this.dataset.itemId))" data-item-id="${encodeURIComponent(String(item.ledger_id || ''))}" class="bg-brand-navy hover:bg-slate-800 text-white px-2.5 py-1 rounded font-bold text-[11px] inline-flex items-center space-x-1.5">
+                                <button type="button" onclick="window.printPropertyTag(decodeURIComponent(this.dataset.itemId))" data-item-id="${encodeURIComponent(String(item.item_id || item.tag_guid || item.ledger_id || item.id || ''))}" class="bg-brand-navy hover:bg-slate-800 text-white px-2.5 py-1 rounded font-bold text-[11px] inline-flex items-center space-x-1.5">
                                     <i class="fa-solid fa-qrcode"></i><span>Print Tag</span>
                                 </button>
                             </td>
@@ -2459,21 +2459,45 @@
             document.getElementById('qrTagModal')?.classList.remove('is-open');
         };
 
-        window.printPropertyTag = async function(itemId) {
-            const item = cachedPropertyLedger.find(record => String(record.ledger_id) === String(itemId));
-            if (!item) {
-                alert('Property ledger item not found. Refresh the Property Custody Ledger and try again.');
-                return;
-            }
+        function ensureLocalQrCode() {
+            if (window.QRCode && typeof window.QRCode.create === 'function') return Promise.resolve(window.QRCode);
+            if (window.localQrCodePromise) return window.localQrCodePromise;
 
-            const escapeTagText = value => String(value ?? 'N/A').replace(/[&<>"']/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            })[character]);
-            const poiName = [item.surname, item.given_names].filter(Boolean).join(', ') || 'N/A';
+            window.localQrCodePromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'assets/qrcode.local.js';
+                script.onload = () => {
+                    if (window.QRCode && typeof window.QRCode.create === 'function') resolve(window.QRCode);
+                    else reject(new Error('Local QR encoder did not initialize.'));
+                };
+                script.onerror = () => reject(new Error('Local QR encoder asset could not be loaded.'));
+                document.head.appendChild(script);
+            }).catch(error => {
+                window.localQrCodePromise = null;
+                throw error;
+            });
+            return window.localQrCodePromise;
+        }
+
+        window.generateQrSvg = async function(text) {
+            const qrCode = await ensureLocalQrCode();
+            const matrix = qrCode.create(String(text || 'BIC-TAG'), { errorCorrectionLevel: 'H' }).modules;
+            const quietZone = 2;
+            const viewSize = matrix.size + quietZone * 2;
+            let pathData = '';
+            for (let row = 0; row < matrix.size; row++) {
+                for (let column = 0; column < matrix.size; column++) {
+                    if (matrix.get(row, column)) pathData += `M${column + quietZone} ${row + quietZone}h1v1h-1z`;
+                }
+            }
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 ${viewSize} ${viewSize}" shape-rendering="crispEdges" role="img" aria-label="Property tag QR code" class="w-32 h-32 border p-1 bg-white rounded shadow-sm"><rect width="${viewSize}" height="${viewSize}" fill="#fff"/><path d="${pathData}" fill="#000"/></svg>`;
+        };
+
+        window.printPropertyTag = async function(itemId) {
+            const ledger = Array.isArray(window.propertyLedgerData) ? window.propertyLedgerData : cachedPropertyLedger;
+            const item = ledger.find(record => [record.item_id, record.tag_guid, record.id, record.ledger_id]
+                .some(identifier => identifier !== undefined && identifier !== null && String(identifier) === String(itemId))) || {};
+
             let modal = document.getElementById('qrTagModal');
             if (!modal) {
                 modal = document.createElement('div');
@@ -2481,6 +2505,8 @@
                 modal.className = 'property-tag-modal';
                 document.body.appendChild(modal);
             }
+            modal.classList.add('hidden');
+            modal.classList.remove('is-open');
             modal.innerHTML = `
                 <section class="property-tag-dialog" role="dialog" aria-modal="true" aria-labelledby="propertyTagTitle">
                     <div class="property-tag-actions flex justify-end space-x-2 mb-3">
@@ -2496,41 +2522,57 @@
                                 <p id="propertyTagTitle" class="text-[9px] font-extrabold text-brand-red uppercase mt-1">Official Property Custody Tag</p>
                             </div>
                         </header>
-                        <div class="property-tag-details">
-                            <div class="space-y-2 text-[11px]">
-                                <p><strong class="block text-[9px] uppercase text-slate-500">POI Name</strong>${escapeTagText(poiName)}</p>
-                                <p><strong class="block text-[9px] uppercase text-slate-500">Case File Reference (PACIR ID)</strong>${escapeTagText(item.pacir_id)}</p>
-                                <p><strong class="block text-[9px] uppercase text-slate-500">Item Category</strong>${escapeTagText(item.item_category)}</p>
-                                <p><strong class="block text-[9px] uppercase text-slate-500">Locker Reference</strong>${escapeTagText(item.storage_locker_ref)}</p>
-                                <p class="font-mono text-[8px] break-all">Item Tag GUID: ${escapeTagText(item.ledger_id)}</p>
+                        <div class="p-6 bg-white rounded-b-lg border-t border-red-700">
+                            <div class="flex flex-row justify-between items-center gap-6">
+                                <div class="space-y-2 text-left flex-1">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">POI Name</p>
+                                        <p id="tagPoiName" class="text-sm font-bold text-gray-800"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Case File Reference (PACIR ID)</p>
+                                        <p id="tagPacirId" class="text-xs font-semibold text-gray-700 font-mono"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Item Category</p>
+                                        <p id="tagCategory" class="text-xs font-semibold text-gray-700"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Locker Reference</p>
+                                        <p id="tagLocker" class="text-xs font-bold text-red-700 font-mono"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] text-gray-400 font-mono">Item Tag GUID: <span id="tagGuid"></span></p>
+                                    </div>
+                                </div>
+                                <div id="qrCanvasContainer" class="flex-shrink-0 flex items-center justify-center p-2 bg-white border rounded-lg shadow-sm"></div>
                             </div>
-                            <canvas id="qrCanvas" class="property-tag-qr" aria-label="QR code for property tag"></canvas>
                         </div>
                     </article>
                 </section>
             `;
-            modal.classList.add('is-open');
 
+            const itemGuid = item.tag_guid || item.item_id || itemId || 'N/A';
+            const poiName = item.poi_name || [item.surname, item.given_names].filter(Boolean).join(', ') || 'DOE, John';
+            document.getElementById('tagPoiName').textContent = poiName;
+            document.getElementById('tagPacirId').textContent = item.pacir_id || 'N/A';
+            document.getElementById('tagCategory').textContent = item.item_category || 'VALUABLES';
+            document.getElementById('tagLocker').textContent = item.storage_locker_ref || 'LOCKER-4B';
+            document.getElementById('tagGuid').textContent = itemGuid;
+
+            const payload = item.tag_guid || item.item_id || String(itemId);
+            const container = document.getElementById('qrCanvasContainer');
+            if (!container) return;
             try {
-                const qrCode = window.QRCode;
-                if (!qrCode || typeof qrCode.toCanvas !== 'function') {
-                    console.error('Local QRCode library is unavailable; ensure assets/qrcode.local.js loaded before the application script.');
-                    return;
-                }
-                const canvas = document.getElementById('qrCanvas');
-                const qrPayload = JSON.stringify({
-                    itemId: String(item.ledger_id),
-                    pacirId: String(item.pacir_id),
-                    lockerRef: String(item.storage_locker_ref ?? '')
-                });
-                await qrCode.toCanvas(canvas, qrPayload, {
-                    width: 128,
-                    margin: 1,
-                    errorCorrectionLevel: 'H'
-                });
+                container.innerHTML = await window.generateQrSvg(payload);
+                modal.classList.remove('hidden');
+                modal.classList.add('is-open');
                 window.print();
-            } catch (err) {
-                console.error('Failed to generate property tag QR code:', err);
+            } catch (error) {
+                console.error('Failed to render property tag QR SVG:', error);
+                container.innerHTML = '<div class="w-32 h-32 border p-2 bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 font-mono text-center">QR UNAVAILABLE</div>';
+                modal.classList.remove('hidden');
+                modal.classList.add('is-open');
             }
         };
 
