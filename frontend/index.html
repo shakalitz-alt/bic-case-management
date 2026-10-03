@@ -25,7 +25,7 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="assets/qrcode.local.js"></script>
     <style>
         .property-tag-modal { display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, 0.72); }
         .property-tag-modal.is-open { display: flex; }
@@ -2512,8 +2512,10 @@
             modal.classList.add('is-open');
 
             try {
-                if (!window.QRCode || typeof window.QRCode.toCanvas !== 'function') {
-                    throw new Error('The QR code generator did not load. Check the network connection and retry.');
+                const qrCode = window.QRCode;
+                if (!qrCode || typeof qrCode.toCanvas !== 'function') {
+                    console.error('Local QRCode library is unavailable; ensure assets/qrcode.local.js loaded before the application script.');
+                    return;
                 }
                 const canvas = document.getElementById('qrCanvas');
                 const qrPayload = JSON.stringify({
@@ -2521,7 +2523,7 @@
                     pacirId: String(item.pacir_id),
                     lockerRef: String(item.storage_locker_ref ?? '')
                 });
-                await window.QRCode.toCanvas(canvas, qrPayload, {
+                await qrCode.toCanvas(canvas, qrPayload, {
                     width: 128,
                     margin: 1,
                     errorCorrectionLevel: 'H'
@@ -2529,7 +2531,6 @@
                 window.print();
             } catch (err) {
                 console.error('Failed to generate property tag QR code:', err);
-                alert(err.message || 'Failed to generate the property tag QR code.');
             }
         };
 
