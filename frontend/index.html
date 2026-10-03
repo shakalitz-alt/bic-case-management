@@ -26,6 +26,7 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="assets/qrcode.local.js"></script>
+    <script src="vendor/qrcode.min.js"></script>
     <style>
         .property-tag-modal { display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, 0.72); }
         .property-tag-modal.is-open { display: flex; }
@@ -2441,7 +2442,7 @@
                                 <span class="px-2 py-1 rounded bg-slate-100 text-slate-700 font-bold text-[10px]">${item.custody_status || 'IN_CUSTODY'}</span>
                             </td>
                             <td class="py-3 px-4 text-right">
-                                <button type="button" onclick="window.printPropertyTag(decodeURIComponent(this.dataset.itemId))" data-item-id="${encodeURIComponent(String(item.item_id || item.tag_guid || item.ledger_id || item.id || ''))}" class="bg-brand-navy hover:bg-slate-800 text-white px-2.5 py-1 rounded font-bold text-[11px] inline-flex items-center space-x-1.5">
+                                <button type="button" onclick="window.printPropertyTag(decodeURIComponent(this.dataset.itemId))" data-item-id="${encodeURIComponent(String(item.tag_guid || item.item_id || item.ledger_id || item.id || ''))}" class="bg-brand-navy hover:bg-slate-800 text-white px-2.5 py-1 rounded font-bold text-[11px] inline-flex items-center space-x-1.5">
                                     <i class="fa-solid fa-qrcode"></i><span>Print Tag</span>
                                 </button>
                             </td>
@@ -2456,47 +2457,19 @@
         const loadPropertyRegistry = window.loadPropertyLedger;
 
         window.closePropertyTagModal = function() {
-            document.getElementById('qrTagModal')?.classList.remove('is-open');
-        };
-
-        function ensureLocalQrCode() {
-            if (window.QRCode && typeof window.QRCode.create === 'function') return Promise.resolve(window.QRCode);
-            if (window.localQrCodePromise) return window.localQrCodePromise;
-
-            window.localQrCodePromise = new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'assets/qrcode.local.js';
-                script.onload = () => {
-                    if (window.QRCode && typeof window.QRCode.create === 'function') resolve(window.QRCode);
-                    else reject(new Error('Local QR encoder did not initialize.'));
-                };
-                script.onerror = () => reject(new Error('Local QR encoder asset could not be loaded.'));
-                document.head.appendChild(script);
-            }).catch(error => {
-                window.localQrCodePromise = null;
-                throw error;
-            });
-            return window.localQrCodePromise;
-        }
-
-        window.generateQrSvg = async function(text) {
-            const qrCode = await ensureLocalQrCode();
-            const matrix = qrCode.create(String(text || 'BIC-TAG'), { errorCorrectionLevel: 'H' }).modules;
-            const quietZone = 2;
-            const viewSize = matrix.size + quietZone * 2;
-            let pathData = '';
-            for (let row = 0; row < matrix.size; row++) {
-                for (let column = 0; column < matrix.size; column++) {
-                    if (matrix.get(row, column)) pathData += `M${column + quietZone} ${row + quietZone}h1v1h-1z`;
-                }
+            const modal = document.getElementById('qrTagModal');
+            if (modal) {
+                modal.classList.remove('is-open');
+                modal.classList.add('hidden');
+                modal.style.display = '';
             }
-            return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 ${viewSize} ${viewSize}" shape-rendering="crispEdges" role="img" aria-label="Property tag QR code" class="w-32 h-32 border p-1 bg-white rounded shadow-sm"><rect width="${viewSize}" height="${viewSize}" fill="#fff"/><path d="${pathData}" fill="#000"/></svg>`;
         };
 
-        window.printPropertyTag = async function(itemId) {
-            const ledger = Array.isArray(window.propertyLedgerData) ? window.propertyLedgerData : cachedPropertyLedger;
-            const item = ledger.find(record => [record.item_id, record.tag_guid, record.id, record.ledger_id]
-                .some(identifier => identifier !== undefined && identifier !== null && String(identifier) === String(itemId))) || {};
+        window.printPropertyTag = function(itemId) {
+            const item = window.propertyLedgerData?.find(record =>
+                [record.tag_guid, record.item_id, record.id, record.ledger_id]
+                    .some(identifier => identifier !== undefined && identifier !== null && String(identifier) === String(itemId))
+            ) || {};
 
             let modal = document.getElementById('qrTagModal');
             if (!modal) {
@@ -2564,15 +2537,18 @@
             const container = document.getElementById('qrCanvasContainer');
             if (!container) return;
             try {
-                container.innerHTML = await window.generateQrSvg(payload);
+                container.replaceChildren();
+                new QRCode(container, { text: String(payload || 'BIC-PROPERTY-TAG'), width: 128, height: 128 });
                 modal.classList.remove('hidden');
                 modal.classList.add('is-open');
+                modal.style.display = 'flex';
                 window.print();
             } catch (error) {
                 console.error('Failed to render property tag QR SVG:', error);
                 container.innerHTML = '<div class="w-32 h-32 border p-2 bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 font-mono text-center">QR UNAVAILABLE</div>';
                 modal.classList.remove('hidden');
                 modal.classList.add('is-open');
+                modal.style.display = 'flex';
             }
         };
 
